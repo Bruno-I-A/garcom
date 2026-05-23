@@ -68,6 +68,8 @@ export default function Login() {
           <button className="primary-button w-full text-lg" type="submit" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
+
+          <p className="text-center text-sm text-gray-500">Teste com usuário demo e senha demo.</p>
         </form>
       </section>
     </main>

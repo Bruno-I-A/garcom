@@ -1,6 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'https://agentes-agente-restaurante.feit1k.easypanel.host';
 const TOKEN_KEY = 'shiftsys_garcom_token';
 const GARCOM_KEY = 'shiftsys_garcom';
+const DEMO_TOKEN = 'demo-token';
 
 function friendlyError(error) {
   if (error?.message) return error.message;
@@ -22,6 +23,10 @@ export function getToken() {
 
 export function getGarcom() {
   return getStoredJson(GARCOM_KEY);
+}
+
+export function isDemoSession() {
+  return getToken() === DEMO_TOKEN;
 }
 
 export function saveSession(token, garcom) {
@@ -70,6 +75,19 @@ async function request(path, options = {}) {
 }
 
 export async function login(usuario, senha) {
+  if (usuario === 'demo' && senha === 'demo') {
+    const session = {
+      token: DEMO_TOKEN,
+      garcom: {
+        id: 'demo',
+        nome: 'Garçom Demo',
+        usuario: 'demo'
+      }
+    };
+    saveSession(session.token, session.garcom);
+    return session;
+  }
+
   const data = await request('/garcom/login', {
     method: 'POST',
     body: JSON.stringify({ usuario, senha })
@@ -95,6 +113,21 @@ function mergePedidos(pedidos) {
 }
 
 export async function getPedidosAbertos() {
+  if (isDemoSession()) {
+    return [
+      {
+        id: 'demo-pedido-1',
+        mesa: '3',
+        status: 'novo',
+        itens: [
+          { id: 'demo-1', nome: 'Hambúrguer da casa', preco: 32.9, quantidade: 2 },
+          { id: 'demo-2', nome: 'Suco natural', preco: 12, quantidade: 2 }
+        ],
+        total: 89.8
+      }
+    ];
+  }
+
   const [novos, preparando] = await Promise.all([
     request('/pedidos?origem=garcom&status=novo'),
     request('/pedidos?origem=garcom&status=preparando')
@@ -103,14 +136,36 @@ export async function getPedidosAbertos() {
 }
 
 export function getCategorias() {
+  if (isDemoSession()) {
+    return Promise.resolve([
+      { id: 'lanches', nome: 'Lanches' },
+      { id: 'bebidas', nome: 'Bebidas' },
+      { id: 'sobremesas', nome: 'Sobremesas' }
+    ]);
+  }
+
   return request('/categorias');
 }
 
 export function getCardapio() {
+  if (isDemoSession()) {
+    return Promise.resolve([
+      { id: 'burger', nome: 'Hambúrguer da casa', preco: 32.9, categoria_id: 'lanches' },
+      { id: 'batata', nome: 'Batata rústica', preco: 18.5, categoria_id: 'lanches' },
+      { id: 'suco', nome: 'Suco natural', preco: 12, categoria_id: 'bebidas' },
+      { id: 'refri', nome: 'Refrigerante lata', preco: 8, categoria_id: 'bebidas' },
+      { id: 'pudim', nome: 'Pudim', preco: 14.9, categoria_id: 'sobremesas' }
+    ]);
+  }
+
   return request('/cardapio');
 }
 
 export function criarPedido(pedido) {
+  if (isDemoSession()) {
+    return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });
+  }
+
   return request('/pedidos', {
     method: 'POST',
     body: JSON.stringify(pedido)
@@ -118,6 +173,10 @@ export function criarPedido(pedido) {
 }
 
 export function atualizarPedidoStatus(pedidoId, status) {
+  if (isDemoSession()) {
+    return Promise.resolve({ id: pedidoId, status });
+  }
+
   return request(`/pedidos/${pedidoId}`, {
     method: 'PATCH',
     body: JSON.stringify({ status })
