@@ -172,6 +172,17 @@ export function criarPedido(pedido) {
   });
 }
 
+export function adicionarItensPedido(pedidoId, itens) {
+  if (isDemoSession()) {
+    return Promise.resolve({ id: pedidoId, itens });
+  }
+
+  return request(`/pedidos/${pedidoId}/itens`, {
+    method: 'PATCH',
+    body: JSON.stringify({ itens })
+  });
+}
+
 export function atualizarPedidoStatus(pedidoId, status) {
   if (isDemoSession()) {
     return Promise.resolve({ id: pedidoId, status });

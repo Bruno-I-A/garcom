@@ -11,6 +11,11 @@ function itensDoPedido(pedido) {
   return asArray(pedido?.itens || pedido?.items);
 }
 
+function pedidoAberto(pedido) {
+  const status = String(pedido?.status || '').toLowerCase();
+  return status !== 'entregue' && status !== 'cancelado';
+}
+
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -32,8 +37,7 @@ export default function Mesa() {
         const pedidos = asArray(data);
         const atual = pedidos.find((item) => {
           const mesa = String(item?.mesa || item?.numero_mesa || item?.mesa_numero || '');
-          const status = String(item?.status || '').toLowerCase();
-          return mesa === String(numero) && ['novo', 'preparando'].includes(status);
+          return mesa === String(numero) && pedidoAberto(item);
         });
         setPedido(atual || null);
       } catch (err) {

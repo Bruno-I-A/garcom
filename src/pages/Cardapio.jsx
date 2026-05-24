@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { asArray, criarPedido, getCardapio, getCategorias, getGarcom } from '../services/api.js';
+import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getPedidosAbertos } from '../services/api.js';
 
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -17,6 +17,19 @@ function categoriaId(categoria) {
 
 function produtoCategoria(produto) {
   return produto?.categoria_id || produto?.categoriaId || produto?.categoria || produto?.categoria_nome || 'Sem categoria';
+}
+
+function pedidoId(pedido) {
+  return pedido?.id || pedido?._id || pedido?.pedido_id;
+}
+
+function mesaDoPedido(pedido) {
+  return String(pedido?.mesa || pedido?.numero_mesa || pedido?.mesa_numero || '');
+}
+
+function pedidoAberto(pedido) {
+  const status = String(pedido?.status || '').toLowerCase();
+  return status !== 'entregue' && status !== 'cancelado';
 }
 
 export default function Cardapio() {
@@ -123,7 +136,16 @@ export default function Cardapio() {
     setSaving(true);
     setError('');
     try {
-      await criarPedido(pedido);
+      const pedidos = asArray(await getPedidosAbertos());
+      const pedidoExistente = pedidos.find((item) => mesaDoPedido(item) === String(numero) && pedidoAberto(item));
+      const pedidoExistenteId = pedidoId(pedidoExistente);
+
+      if (pedidoExistenteId) {
+        await adicionarItensPedido(pedidoExistenteId, cartItems);
+      } else {
+        await criarPedido(pedido);
+      }
+
       navigate(`/mesa/${numero}`, { replace: true });
     } catch (err) {
       setError(err.message || 'Não foi possível confirmar o pedido.');
