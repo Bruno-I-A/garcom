@@ -198,6 +198,23 @@ export default function Cardapio() {
     }));
   }
 
+  function removeProduto(produto, quantidade = 1) {
+    const id = produtoId(produto);
+    setCart((current) => {
+      const item = current[id];
+      if (!item) return current;
+
+      const next = { ...current };
+      const nextQuantidade = Number((Number(item.quantidade || 0) - Number(quantidade || 0)).toFixed(3));
+      if (nextQuantidade <= 0) {
+        delete next[id];
+      } else {
+        next[id] = { ...item, quantidade: nextQuantidade };
+      }
+      return next;
+    });
+  }
+
   function addBuffetProduto(produto) {
     const tipo = tipoBuffet(produto);
     const rawValue = valorBuffetInput(produto);
@@ -338,6 +355,11 @@ export default function Cardapio() {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
+                          {item ? (
+                            <button className="secondary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => removeProduto(produto)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                              -
+                            </button>
+                          ) : null}
                           {item ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-orange-500/15 px-2 text-lg font-black text-orange-200">{formatarQuantidadeItem(item)}</span> : null}
                           <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
                             +
@@ -345,7 +367,14 @@ export default function Cardapio() {
                         </div>
                       )}
                     </div>
-                    {buffet && item ? <p className="mt-3 rounded-lg bg-orange-500/10 px-3 py-2 text-sm font-bold text-orange-100">No carrinho: {formatarQuantidadeItem(item)}</p> : null}
+                    {buffet && item ? (
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-orange-500/10 px-3 py-2">
+                        <span className="text-sm font-bold text-orange-100">No carrinho: {formatarQuantidadeItem(item)}</span>
+                        <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removeProduto(produto, buffetTipo === 'kg' ? Number(buffetValue || 0) : 1)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                          -
+                        </button>
+                      </div>
+                    ) : null}
                   </article>
                 );
               })
