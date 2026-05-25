@@ -200,7 +200,7 @@ export function reimprimirPedido(pedidoId) {
   }
 
   return request(`/pedidos/${pedidoId}/reimprimir`, {
-    method: 'PUT'
+    method: 'POST'
   });
 }
 
