@@ -135,6 +135,14 @@ export async function getPedidosAbertos() {
   return mergePedidos([novos, preparando]);
 }
 
+export function getMesas() {
+  if (isDemoSession()) {
+    return Promise.resolve(Array.from({ length: 20 }, (_, index) => ({ id: index + 1, numero: index + 1, ativo: true })));
+  }
+
+  return request('/mesas');
+}
+
 export function getCategorias() {
   if (isDemoSession()) {
     return Promise.resolve([

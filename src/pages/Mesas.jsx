@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { asArray, getPedidosAbertos } from '../services/api.js';
-
-const MESAS = Array.from({ length: 20 }, (_, index) => index + 1);
+import { asArray, getMesas, getPedidosAbertos } from '../services/api.js';
 
 function mesaDoPedido(pedido) {
   return String(pedido?.mesa || pedido?.numero_mesa || pedido?.mesa_numero || '');
@@ -15,6 +13,7 @@ function pedidoAberto(pedido) {
 
 export default function Mesas() {
   const navigate = useNavigate();
+  const [mesas, setMesas] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,8 +25,15 @@ export default function Mesas() {
       setLoading(true);
       setError('');
       try {
-        const data = await getPedidosAbertos();
-        if (active) setPedidos(asArray(data));
+        const [mesasData, pedidosData] = await Promise.all([getMesas(), getPedidosAbertos()]);
+        if (active) {
+          setMesas(
+            asArray(mesasData)
+              .filter((mesa) => mesa?.ativo === true)
+              .sort((a, b) => Number(a?.numero || 0) - Number(b?.numero || 0))
+          );
+          setPedidos(asArray(pedidosData));
+        }
       } catch (err) {
         if (active) setError(err.message || 'Não foi possível carregar as mesas.');
       } finally {
@@ -54,11 +60,14 @@ export default function Mesas() {
         {error ? <p className="card border-red-500/60 bg-red-950/40 text-red-100">{error}</p> : null}
 
         <section className="grid grid-cols-2 gap-3 pb-4">
-          {MESAS.map((numero) => {
+          {!loading && !mesas.length ? <p className="card col-span-2 text-gray-300">Nenhuma mesa ativa encontrada.</p> : null}
+
+          {mesas.map((mesa) => {
+            const numero = mesa?.numero;
             const ocupada = mesasOcupadas.has(String(numero));
             return (
               <button
-                key={numero}
+                key={mesa?.id || numero}
                 className={`relative min-h-32 overflow-hidden rounded-xl border p-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98] ${
                   ocupada ? 'border-orange-400/70 bg-orange-950/25' : 'border-white/10 bg-[#171a22]/95 hover:border-white/20'
                 }`}
