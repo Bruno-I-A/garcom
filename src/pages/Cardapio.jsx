@@ -15,6 +15,10 @@ function categoriaId(categoria) {
   return categoria?.id || categoria?._id || categoria?.categoria_id || categoria?.nome;
 }
 
+function categoriaNome(categoria) {
+  return categoria?.nome || categoria?.name || categoria?.categoria_nome || String(categoriaId(categoria));
+}
+
 function produtoCategoria(produto) {
   return produto?.categoria_id || produto?.categoriaId || produto?.categoria || produto?.categoria_nome || 'Sem categoria';
 }
@@ -32,11 +36,23 @@ function pedidoAberto(pedido) {
   return status !== 'entregue' && status !== 'cancelado';
 }
 
+function categoriaIcone(nome, index) {
+  const value = String(nome || '').toLowerCase();
+  if (value.includes('bebida') || value.includes('suco') || value.includes('drink')) return '🥤';
+  if (value.includes('lanche') || value.includes('burger') || value.includes('hamb')) return '🍔';
+  if (value.includes('sobremesa') || value.includes('doce')) return '🍮';
+  if (value.includes('pizza')) return '🍕';
+  if (value.includes('cafe') || value.includes('caf')) return '☕';
+  if (value.includes('prato') || value.includes('refei')) return '🍽️';
+  return ['🍴', '🥘', '🥗', '🍟'][index % 4];
+}
+
 export default function Cardapio() {
   const { numero } = useParams();
   const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
   const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,17 +87,30 @@ export default function Cardapio() {
     const byId = new Map(categorias.map((categoria) => [String(categoriaId(categoria)), categoria]));
     const groups = new Map();
 
+    categorias.forEach((categoria, index) => {
+      const id = String(categoriaId(categoria));
+      const nome = categoriaNome(categoria);
+      groups.set(id, { id, nome, icon: categoriaIcone(nome, index), items: [] });
+    });
+
     produtos.forEach((produto) => {
       const key = String(produtoCategoria(produto));
       const categoria = byId.get(key);
-      const nomeCategoria = categoria?.nome || produto?.categoria_nome || produto?.categoria?.nome || key;
+      const id = categoria ? String(categoriaId(categoria)) : key;
+      const nome = categoria ? categoriaNome(categoria) : produto?.categoria_nome || produto?.categoria?.nome || key;
 
-      if (!groups.has(nomeCategoria)) groups.set(nomeCategoria, []);
-      groups.get(nomeCategoria).push(produto);
+      if (!groups.has(id)) {
+        groups.set(id, { id, nome, icon: categoriaIcone(nome, groups.size), items: [] });
+      }
+      groups.get(id).items.push(produto);
     });
 
-    return Array.from(groups.entries()).map(([nome, items]) => ({ nome, items }));
+    return Array.from(groups.values());
   }, [categorias, produtos]);
+
+  const categoriaAtual = useMemo(() => {
+    return categoriasOrdenadas.find((categoria) => categoria.id === categoriaSelecionada) || null;
+  }, [categoriaSelecionada, categoriasOrdenadas]);
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const quantidade = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantidade, 0), [cartItems]);
@@ -98,19 +127,6 @@ export default function Cardapio() {
         quantidade: (current[id]?.quantidade || 0) + 1
       }
     }));
-  }
-
-  function removeProduto(id) {
-    setCart((current) => {
-      const next = { ...current };
-      if (!next[id]) return current;
-      if (next[id].quantidade <= 1) {
-        delete next[id];
-      } else {
-        next[id] = { ...next[id], quantidade: next[id].quantidade - 1 };
-      }
-      return next;
-    });
   }
 
   async function confirmarPedido() {
@@ -157,55 +173,81 @@ export default function Cardapio() {
   return (
     <main className="app-shell">
       <div className="mobile-page">
-        <Header title={`Cardápio - Mesa ${numero}`} showBack />
+        {!categoriaAtual ? (
+          <Header title={`Cardápio - Mesa ${numero}`} showBack />
+        ) : (
+          <header className="sticky top-0 z-20 -mx-4 mb-4 border-b border-gray-800 bg-shiftsys-dark/95 px-4 py-4 backdrop-blur">
+            <div className="flex min-h-12 items-center gap-3">
+              <button className="secondary-button min-w-12 px-3" type="button" onClick={() => setCategoriaSelecionada(null)} aria-label="Voltar para categorias">
+                ←
+              </button>
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-2xl font-black text-white">{categoriaAtual.nome}</h1>
+                <p className="truncate text-sm text-gray-400">Mesa {numero}</p>
+              </div>
+            </div>
+          </header>
+        )}
 
         {loading ? <p className="card border-gray-700 text-center text-gray-200">Carregando cardápio...</p> : null}
         {error ? <p className="mb-4 rounded-xl border border-red-500/60 bg-red-950/40 p-3 text-red-100">{error}</p> : null}
 
-        <section className="space-y-6 pb-32">
-          {!loading && !categoriasOrdenadas.length ? <p className="card border-gray-700 text-gray-300">Nenhum produto encontrado.</p> : null}
+        {!categoriaAtual ? (
+          <section className={quantidade ? 'grid grid-cols-2 gap-3 pb-32' : 'grid grid-cols-2 gap-3 pb-6'}>
+            {!loading && !categoriasOrdenadas.length ? <p className="card col-span-2 border-gray-700 text-gray-300">Nenhuma categoria encontrada.</p> : null}
 
-          {categoriasOrdenadas.map((categoria) => (
-            <div key={categoria.nome}>
-              <h2 className="mb-3 text-xl font-black text-white">{categoria.nome}</h2>
-              <div className="space-y-3">
-                {categoria.items.map((produto) => {
-                  const id = produtoId(produto);
-                  const item = cart[id];
-                  const preco = Number(produto?.preco || produto?.price || 0);
-                  return (
-                    <article className="card border-gray-700" key={id}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h3>
-                          <p className="mt-1 text-base font-semibold text-orange-300">{moeda(preco)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {item ? (
-                            <button className="secondary-button h-12 min-h-12 w-12 px-0" type="button" onClick={() => removeProduto(id)}>
-                              -
-                            </button>
-                          ) : null}
-                          {item ? <span className="w-7 text-center text-lg font-black">{item.quantidade}</span> : null}
-                          <button className="primary-button h-12 min-h-12 w-12 px-0 text-2xl" type="button" onClick={() => addProduto(produto)}>
-                            +
-                          </button>
-                        </div>
+            {categoriasOrdenadas.map((categoria) => (
+              <button
+                className="card flex min-h-32 flex-col items-center justify-center gap-3 border-gray-700 text-center transition active:scale-[0.98]"
+                type="button"
+                key={categoria.id}
+                onClick={() => setCategoriaSelecionada(categoria.id)}
+              >
+                <span className="text-4xl" aria-hidden="true">
+                  {categoria.icon}
+                </span>
+                <span className="text-lg font-black leading-tight text-white">{categoria.nome}</span>
+              </button>
+            ))}
+          </section>
+        ) : (
+          <section className={quantidade ? 'space-y-3 pb-32' : 'space-y-3 pb-6'}>
+            {categoriaAtual.items.length ? (
+              categoriaAtual.items.map((produto) => {
+                const id = produtoId(produto);
+                const item = cart[id];
+                const preco = Number(produto?.preco || produto?.price || 0);
+                return (
+                  <article className="card border-gray-700" key={id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
+                        <p className="mt-1 text-base font-semibold text-orange-300">{moeda(preco)}</p>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </section>
+                      <div className="flex items-center gap-2">
+                        {item ? <span className="w-7 text-center text-lg font-black">{item.quantidade}</span> : null}
+                        <button className="primary-button h-12 min-h-12 w-12 px-0 text-2xl" type="button" onClick={() => addProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <p className="card border-gray-700 text-gray-300">Nenhum item nesta categoria.</p>
+            )}
+          </section>
+        )}
 
-        <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-gray-800 bg-gray-950/95 p-4 backdrop-blur">
-          <button className="primary-button w-full justify-between" type="button" onClick={confirmarPedido} disabled={saving || !quantidade}>
-            <span>{saving ? 'Enviando...' : `Confirmar ${quantidade} item${quantidade === 1 ? '' : 's'}`}</span>
-            <span>{moeda(total)}</span>
-          </button>
-        </div>
+        {quantidade ? (
+          <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-gray-800 bg-gray-950/95 p-4 backdrop-blur">
+            <button className="primary-button w-full justify-between" type="button" onClick={confirmarPedido} disabled={saving}>
+              <span>{saving ? 'Enviando...' : `Confirmar ${quantidade} item${quantidade === 1 ? '' : 's'}`}</span>
+              <span>{moeda(total)}</span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </main>
   );
