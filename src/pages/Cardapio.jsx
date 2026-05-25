@@ -7,6 +7,13 @@ function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function normalizarTexto(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 function produtoId(produto) {
   return produto?.id || produto?._id || produto?.produto_id || produto?.nome;
 }
@@ -37,7 +44,7 @@ function pedidoAberto(pedido) {
 }
 
 function categoriaVisual(nome, index) {
-  const value = String(nome || '').toLowerCase();
+  const value = normalizarTexto(nome);
   const fallback = [
     { icon: '🍽️', tone: 'from-orange-500/25 to-amber-400/10' },
     { icon: '🍔', tone: 'from-red-500/25 to-orange-400/10' },
@@ -47,6 +54,9 @@ function categoriaVisual(nome, index) {
 
   if (value.includes('bebida') || value.includes('suco') || value.includes('drink') || value.includes('refri')) {
     return { icon: '🥤', tone: 'from-cyan-500/25 to-blue-400/10' };
+  }
+  if (value.includes('buffet')) {
+    return { icon: '🍽️', tone: 'from-orange-500/25 to-amber-400/10' };
   }
   if (value.includes('xis') || value.includes('lanche') || value.includes('burger') || value.includes('burguer') || value.includes('hamb')) {
     return { icon: '🍔', tone: 'from-red-500/25 to-orange-400/10' };
@@ -82,6 +92,7 @@ export default function Cardapio() {
   const [produtos, setProdutos] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
   const [cart, setCart] = useState({});
+  const [buffetInputs, setBuffetInputs] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -144,17 +155,61 @@ export default function Cardapio() {
   const quantidade = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantidade, 0), [cartItems]);
   const total = useMemo(() => cartItems.reduce((acc, item) => acc + Number(item.preco || 0) * item.quantidade, 0), [cartItems]);
 
-  function addProduto(produto) {
+  function isProdutoBuffet(produto, nomeCategoria) {
+    return normalizarTexto(nomeCategoria) === 'buffet' || normalizarTexto(produto?.nome || produto?.name).includes('buffet');
+  }
+
+  function tipoBuffet(produto) {
+    const nome = normalizarTexto(produto?.nome || produto?.name);
+    if (nome.includes('kg')) return 'kg';
+    return 'livre';
+  }
+
+  function valorBuffetInput(produto) {
+    const id = produtoId(produto);
+    const tipo = tipoBuffet(produto);
+    return buffetInputs[id] ?? (tipo === 'kg' ? '0.100' : '1');
+  }
+
+  function setValorBuffetInput(produto, value) {
+    const id = produtoId(produto);
+    setBuffetInputs((current) => ({ ...current, [id]: value }));
+  }
+
+  function formatarQuantidadeItem(item) {
+    if (tipoBuffet(item) === 'kg') return Number(item.quantidade || 0).toFixed(3);
+    return item?.quantidade || 0;
+  }
+
+  function formatarQuantidadeTotal(value) {
+    return Number.isInteger(value) ? value : value.toFixed(3);
+  }
+
+  function addProduto(produto, quantidade = 1, preco = Number(produto?.preco || produto?.price || 0)) {
     const id = produtoId(produto);
     setCart((current) => ({
       ...current,
       [id]: {
         id,
         nome: produto?.nome || produto?.name || 'Produto',
-        preco: Number(produto?.preco || produto?.price || 0),
-        quantidade: (current[id]?.quantidade || 0) + 1
+        preco,
+        quantidade: Number((Number(current[id]?.quantidade || 0) + Number(quantidade || 0)).toFixed(3))
       }
     }));
+  }
+
+  function addBuffetProduto(produto) {
+    const tipo = tipoBuffet(produto);
+    const rawValue = valorBuffetInput(produto);
+    const quantidadeBuffet = tipo === 'kg' ? Number(Number(rawValue).toFixed(3)) : Math.floor(Number(rawValue));
+
+    if (!quantidadeBuffet || quantidadeBuffet <= 0) {
+      setError(tipo === 'kg' ? 'Informe o peso do buffet.' : 'Informe o número de pessoas.');
+      return;
+    }
+
+    setError('');
+    addProduto(produto, quantidadeBuffet, 30);
   }
 
   async function confirmarPedido() {
@@ -246,20 +301,51 @@ export default function Cardapio() {
                 const id = produtoId(produto);
                 const item = cart[id];
                 const preco = Number(produto?.preco || produto?.price || 0);
+                const buffet = isProdutoBuffet(produto, categoriaAtual.nome);
+                const buffetTipo = tipoBuffet(produto);
+                const buffetValue = valorBuffetInput(produto);
+                const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
+                const buffetTotal = Number.isFinite(buffetQuantidade) ? 30 * buffetQuantidade : 0;
                 return (
                   <article className="rounded-xl border border-white/10 bg-[#171a22]/95 p-4 shadow-lg shadow-black/20" key={id}>
-                    <div className="flex items-center justify-between gap-3">
+                    <div className={buffet ? 'space-y-4' : 'flex items-center justify-between gap-3'}>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
-                        <p className="mt-1 text-base font-semibold text-orange-300">{moeda(preco)}</p>
+                        <p className="mt-1 text-base font-semibold text-orange-300">{moeda(buffet ? 30 : preco)}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {item ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-orange-500/15 px-2 text-lg font-black text-orange-200">{item.quantidade}</span> : null}
-                        <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
-                          +
-                        </button>
-                      </div>
+                      {buffet ? (
+                        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                          <label className="block">
+                            <span className="mb-2 block text-sm font-bold text-gray-300">{buffetTipo === 'kg' ? 'Peso em kg (ex: 0.850)' : 'Número de pessoas'}</span>
+                            <input
+                              className="field text-base"
+                              type="number"
+                              step={buffetTipo === 'kg' ? '0.001' : '1'}
+                              min={buffetTipo === 'kg' ? '0.1' : '1'}
+                              value={buffetValue}
+                              onChange={(event) => setValorBuffetInput(produto, event.target.value)}
+                              onBlur={() => {
+                                if (buffetTipo === 'kg' && Number(buffetValue) > 0) {
+                                  setValorBuffetInput(produto, Number(buffetValue).toFixed(3));
+                                }
+                              }}
+                            />
+                            <span className="mt-2 block text-sm font-semibold text-orange-300">Total: {moeda(buffetTotal)}</span>
+                          </label>
+                          <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addBuffetProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {item ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-orange-500/15 px-2 text-lg font-black text-orange-200">{formatarQuantidadeItem(item)}</span> : null}
+                          <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
+                            +
+                          </button>
+                        </div>
+                      )}
                     </div>
+                    {buffet && item ? <p className="mt-3 rounded-lg bg-orange-500/10 px-3 py-2 text-sm font-bold text-orange-100">No carrinho: {formatarQuantidadeItem(item)}</p> : null}
                   </article>
                 );
               })
@@ -272,7 +358,7 @@ export default function Cardapio() {
         {quantidade ? (
           <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-orange-500/20 bg-[#0f1117]/95 p-4 shadow-2xl shadow-black/60 backdrop-blur">
             <button className="primary-button w-full justify-between rounded-xl px-5" type="button" onClick={confirmarPedido} disabled={saving}>
-              <span>{saving ? 'Enviando...' : `Confirmar ${quantidade} item${quantidade === 1 ? '' : 's'}`}</span>
+              <span>{saving ? 'Enviando...' : `Confirmar ${formatarQuantidadeTotal(quantidade)} item${quantidade === 1 ? '' : 's'}`}</span>
               <span>{moeda(total)}</span>
             </button>
           </div>
