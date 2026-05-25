@@ -28,15 +28,15 @@ export default function Login() {
   return (
     <main className="app-shell flex items-center justify-center px-4 py-8">
       <section className="w-full max-w-[420px]">
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-shiftsys-orange text-3xl font-black text-white shadow-xl shadow-orange-950/40">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-shiftsys-orange text-3xl font-black text-white shadow-xl shadow-orange-950/40">
             S
           </div>
           <h1 className="text-4xl font-black tracking-normal text-white">ShiftSys</h1>
           <p className="mt-2 text-xl font-semibold text-orange-400">Garçom</p>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="card space-y-4" onSubmit={handleSubmit}>
           <label className="block">
             <span className="mb-2 block text-base font-semibold text-gray-300">Usuário</span>
             <input

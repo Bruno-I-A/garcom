@@ -12,7 +12,7 @@ export default function Header({ title, showBack = false, showLogout = false }) 
   }
 
   return (
-    <header className="sticky top-0 z-20 -mx-4 mb-4 border-b border-gray-800/80 bg-[#0b1220]/95 px-4 py-4 backdrop-blur">
+    <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-white/10 bg-[#0f1117]/95 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur">
       <div className="flex min-h-12 items-center gap-3">
         {showBack ? (
           <button className="secondary-button min-w-12 px-3" type="button" onClick={() => navigate(-1)} aria-label="Voltar">

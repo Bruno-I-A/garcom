@@ -59,15 +59,16 @@ export default function Mesas() {
             return (
               <button
                 key={numero}
-                className={`card min-h-32 text-left transition active:scale-[0.98] ${
-                  ocupada ? 'border-shiftsys-orange bg-orange-950/30' : 'border-gray-700 bg-gray-900'
+                className={`relative min-h-32 overflow-hidden rounded-xl border p-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98] ${
+                  ocupada ? 'border-orange-400/70 bg-orange-950/25' : 'border-white/10 bg-[#171a22]/95 hover:border-white/20'
                 }`}
                 type="button"
                 onClick={() => navigate(`/mesa/${numero}`)}
               >
-                <span className="block text-lg font-semibold text-gray-300">Mesa</span>
-                <span className="mt-1 block text-5xl font-black text-white">{numero}</span>
-                <span className={`mt-3 block text-base font-bold ${ocupada ? 'text-orange-300' : 'text-gray-400'}`}>
+                {ocupada ? <span className="absolute inset-x-0 top-0 h-1 bg-shiftsys-orange" /> : null}
+                <span className="block text-sm font-bold uppercase tracking-wide text-gray-400">Mesa</span>
+                <span className="mt-2 block text-5xl font-black text-white">{numero}</span>
+                <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-bold ${ocupada ? 'bg-orange-500/15 text-orange-200' : 'bg-white/5 text-gray-300'}`}>
                   {ocupada ? 'Ocupada' : 'Livre'}
                 </span>
               </button>

@@ -113,7 +113,7 @@ export default function Mesa() {
 
         {!loading && !pedido ? (
           <section className="pt-10">
-            <div className="card border-gray-700 text-center">
+            <div className="card text-center">
               <p className="text-xl font-bold text-white">Mesa livre</p>
               <p className="mt-2 text-gray-400">Abra um novo pedido para começar.</p>
             </div>
@@ -128,7 +128,7 @@ export default function Mesa() {
             <div className="space-y-3">
               {itens.length ? (
                 itens.map((item, index) => (
-                  <article className="card border-gray-700" key={`${item?.id || item?.nome || index}`}>
+                  <article className="card" key={`${item?.id || item?.nome || index}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
@@ -141,13 +141,13 @@ export default function Mesa() {
                   </article>
                 ))
               ) : (
-                <p className="card border-gray-700 text-gray-300">Pedido sem itens cadastrados.</p>
+                <p className="card text-gray-300">Pedido sem itens cadastrados.</p>
               )}
             </div>
 
-            <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-gray-800 bg-gray-950/95 p-4 backdrop-blur">
-              <div className="mb-3 flex items-center justify-between text-xl font-black">
-                <span>Total</span>
+            <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-orange-500/20 bg-[#0f1117]/95 p-4 shadow-2xl shadow-black/60 backdrop-blur">
+              <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xl font-black">
+                <span className="text-gray-200">Total</span>
                 <span className="text-orange-300">{moeda(total)}</span>
               </div>
               <div className="grid grid-cols-1 gap-3">
