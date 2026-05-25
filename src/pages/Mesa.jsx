@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { asArray, atualizarPedidoStatus, getPedidosAbertos } from '../services/api.js';
+import { asArray, atualizarPedidoStatus, getPedidosAbertos, reimprimirPedido } from '../services/api.js';
 
 function getPedidoId(pedido) {
   return pedido?.id || pedido?._id || pedido?.pedido_id;
@@ -26,12 +26,15 @@ export default function Mesa() {
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     async function loadPedido() {
       setLoading(true);
       setError('');
+      setSuccess('');
       try {
         const data = await getPedidosAbertos();
         const pedidos = asArray(data);
@@ -67,6 +70,7 @@ export default function Mesa() {
 
     setSaving(true);
     setError('');
+    setSuccess('');
     try {
       await atualizarPedidoStatus(pedidoId, status);
       navigate('/mesas', { replace: true });
@@ -77,6 +81,27 @@ export default function Mesa() {
     }
   }
 
+  async function imprimirPedido() {
+    const pedidoId = getPedidoId(pedido);
+    if (!pedidoId) {
+      setError('Erro ao enviar para impressão');
+      setSuccess('');
+      return;
+    }
+
+    setPrinting(true);
+    setError('');
+    setSuccess('');
+    try {
+      await reimprimirPedido(pedidoId);
+      setSuccess('Pedido enviado para impressão');
+    } catch {
+      setError('Erro ao enviar para impressão');
+    } finally {
+      setPrinting(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <div className="mobile-page">
@@ -84,6 +109,7 @@ export default function Mesa() {
 
         {loading ? <p className="card border-gray-700 text-center text-gray-200">Carregando pedido...</p> : null}
         {error ? <p className="mb-4 rounded-xl border border-red-500/60 bg-red-950/40 p-3 text-red-100">{error}</p> : null}
+        {success ? <p className="mb-4 rounded-xl border border-emerald-500/60 bg-emerald-950/40 p-3 text-emerald-100">{success}</p> : null}
 
         {!loading && !pedido ? (
           <section className="pt-10">
@@ -127,6 +153,14 @@ export default function Mesa() {
               <div className="grid grid-cols-1 gap-3">
                 <button className="primary-button" type="button" onClick={() => navigate(`/mesa/${numero}/cardapio`)}>
                   Adicionar Itens
+                </button>
+                <button className="outline-button gap-2" type="button" onClick={imprimirPedido} disabled={printing || saving}>
+                  <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M6 9V2h12v7" />
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <path d="M6 14h12v8H6z" />
+                  </svg>
+                  {printing ? 'Enviando...' : 'Imprimir Pedido'}
                 </button>
                 <button className="secondary-button" type="button" onClick={() => updateStatus('entregue')} disabled={saving}>
                   {saving ? 'Atualizando...' : 'Fechar Pedido'}

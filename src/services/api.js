@@ -194,6 +194,16 @@ export function atualizarPedidoStatus(pedidoId, status) {
   });
 }
 
+export function reimprimirPedido(pedidoId) {
+  if (isDemoSession()) {
+    return Promise.resolve({ id: pedidoId, impresso: true });
+  }
+
+  return request(`/pedidos/${pedidoId}/reimprimir`, {
+    method: 'PUT'
+  });
+}
+
 export function asArray(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
