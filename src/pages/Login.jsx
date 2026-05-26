@@ -29,11 +29,13 @@ export default function Login() {
     <main className="app-shell flex items-center justify-center px-4 py-8">
       <section className="w-full max-w-[420px]">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-shiftsys-orange text-3xl font-black text-white shadow-xl shadow-orange-950/40">
-            S
-          </div>
-          <h1 className="text-4xl font-black tracking-normal text-white">ShiftSys</h1>
-          <p className="mt-2 text-xl font-semibold text-orange-400">Garçom</p>
+          <img
+            className="mx-auto mb-5 h-24 w-24 rounded-[28px] border border-purple-400/25 object-cover shadow-2xl shadow-purple-600/40"
+            src="/icons/logo.png"
+            alt="Comanda Digital"
+          />
+          <h1 className="text-4xl font-black tracking-normal text-white">Comanda Digital</h1>
+          <p className="mt-2 text-xl font-semibold text-purple-300">Garçom</p>
         </div>
 
         <form className="card space-y-4" onSubmit={handleSubmit}>

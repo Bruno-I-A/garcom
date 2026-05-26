@@ -5,8 +5,8 @@ export default {
     extend: {
       colors: {
         shiftsys: {
-          dark: '#111827',
-          orange: '#F97316'
+          dark: '#000000',
+          orange: '#A855F7'
         }
       }
     }

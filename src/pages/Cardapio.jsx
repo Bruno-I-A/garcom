@@ -46,29 +46,29 @@ function pedidoAberto(pedido) {
 function categoriaVisual(nome, index) {
   const value = normalizarTexto(nome);
   const fallback = [
-    { icon: '🍽️', tone: 'from-orange-500/25 to-amber-400/10' },
-    { icon: '🍔', tone: 'from-red-500/25 to-orange-400/10' },
-    { icon: '🍗', tone: 'from-amber-500/25 to-orange-400/10' },
-    { icon: '🍟', tone: 'from-yellow-500/25 to-orange-400/10' }
+    { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' },
+    { icon: '🍔', tone: 'from-fuchsia-500/25 to-purple-400/10' },
+    { icon: '🍗', tone: 'from-violet-500/25 to-cyan-400/10' },
+    { icon: '🍟', tone: 'from-indigo-500/25 to-purple-400/10' }
   ];
 
   if (value.includes('bebida') || value.includes('suco') || value.includes('drink') || value.includes('refri')) {
     return { icon: '🥤', tone: 'from-cyan-500/25 to-blue-400/10' };
   }
   if (value.includes('buffet')) {
-    return { icon: '🍽️', tone: 'from-orange-500/25 to-amber-400/10' };
+    return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
   }
   if (value.includes('xis') || value.includes('lanche') || value.includes('burger') || value.includes('burguer') || value.includes('hamb')) {
-    return { icon: '🍔', tone: 'from-red-500/25 to-orange-400/10' };
+    return { icon: '🍔', tone: 'from-fuchsia-500/25 to-purple-400/10' };
   }
   if (value.includes('combo')) {
     return { icon: '🍱', tone: 'from-emerald-500/25 to-lime-400/10' };
   }
   if (value.includes('frango')) {
-    return { icon: '🍗', tone: 'from-amber-500/25 to-orange-400/10' };
+    return { icon: '🍗', tone: 'from-violet-500/25 to-cyan-400/10' };
   }
   if (value.includes('porç') || value.includes('porc')) {
-    return { icon: '🍟', tone: 'from-yellow-500/25 to-orange-400/10' };
+    return { icon: '🍟', tone: 'from-indigo-500/25 to-purple-400/10' };
   }
   if (value.includes('sobremesa') || value.includes('doce')) {
     return { icon: '🍮', tone: 'from-pink-500/25 to-rose-400/10' };
@@ -77,10 +77,10 @@ function categoriaVisual(nome, index) {
     return { icon: '🍕', tone: 'from-red-500/25 to-yellow-400/10' };
   }
   if (value.includes('cafe') || value.includes('caf')) {
-    return { icon: '☕', tone: 'from-stone-500/25 to-orange-400/10' };
+    return { icon: '☕', tone: 'from-stone-500/25 to-purple-400/10' };
   }
   if (value.includes('prato') || value.includes('refei')) {
-    return { icon: '🍽️', tone: 'from-orange-500/25 to-amber-400/10' };
+    return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
   }
   return fallback[index % fallback.length];
 }
@@ -276,7 +276,7 @@ export default function Cardapio() {
         {!categoriaAtual ? (
           <Header title={`Cardápio - Mesa ${numero}`} showBack />
         ) : (
-          <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-white/10 bg-[#0f1117]/95 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur">
+          <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
             <div className="flex min-h-12 items-center gap-3">
               <button className="secondary-button min-w-12 px-3" type="button" onClick={() => setCategoriaSelecionada(null)} aria-label="Voltar para categorias">
                 ←
@@ -297,14 +297,14 @@ export default function Cardapio() {
             {!loading && !categoriasOrdenadas.length ? <p className="card col-span-2 border-gray-700 text-gray-300">Nenhuma categoria encontrada.</p> : null}
 
             {categoriasOrdenadas.map((categoria) => (
-              <button className="group relative min-h-36 overflow-hidden rounded-xl border border-white/10 bg-[#171a22]/95 p-4 text-left shadow-lg shadow-black/25 transition hover:-translate-y-0.5 hover:border-orange-400/60 active:scale-[0.98]" type="button" key={categoria.id} onClick={() => setCategoriaSelecionada(categoria.id)}>
+              <button className="group relative min-h-36 overflow-hidden rounded-xl border border-purple-400/15 bg-[#0a0610]/95 p-4 text-left shadow-lg shadow-purple-950/20 transition hover:-translate-y-0.5 hover:border-purple-300/60 active:scale-[0.98]" type="button" key={categoria.id} onClick={() => setCategoriaSelecionada(categoria.id)}>
                 <span className={`absolute inset-0 bg-gradient-to-br ${categoria.visual.tone}`} aria-hidden="true" />
                 <span className="relative flex h-full min-h-28 flex-col justify-between">
                   <span className="flex items-start justify-between gap-3">
                     <span className="flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-3xl shadow-inner shadow-white/5" aria-hidden="true">
                       {categoria.visual.icon}
                     </span>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/20 text-lg font-black text-orange-200">›</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-purple-400/20 bg-black/30 text-lg font-black text-purple-200">›</span>
                   </span>
                   <span className="text-xl font-black leading-tight text-white drop-shadow">{categoria.nome}</span>
                 </span>
@@ -324,11 +324,11 @@ export default function Cardapio() {
                 const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
                 const buffetTotal = Number.isFinite(buffetQuantidade) ? 30 * buffetQuantidade : 0;
                 return (
-                  <article className="rounded-xl border border-white/10 bg-[#171a22]/95 p-4 shadow-lg shadow-black/20" key={id}>
+                  <article className="rounded-xl border border-purple-400/15 bg-[#0a0610]/95 p-4 shadow-lg shadow-purple-950/20" key={id}>
                     <div className={buffet ? 'space-y-4' : 'flex items-center justify-between gap-3'}>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
-                        <p className="mt-1 text-base font-semibold text-orange-300">{moeda(buffet ? 30 : preco)}</p>
+                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? 30 : preco)}</p>
                       </div>
                       {buffet ? (
                         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
@@ -347,7 +347,7 @@ export default function Cardapio() {
                                 }
                               }}
                             />
-                            <span className="mt-2 block text-sm font-semibold text-orange-300">Total: {moeda(buffetTotal)}</span>
+                            <span className="mt-2 block text-sm font-semibold text-purple-300">Total: {moeda(buffetTotal)}</span>
                           </label>
                           <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addBuffetProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
                             +
@@ -360,7 +360,7 @@ export default function Cardapio() {
                               -
                             </button>
                           ) : null}
-                          {item ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-orange-500/15 px-2 text-lg font-black text-orange-200">{formatarQuantidadeItem(item)}</span> : null}
+                          {item ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-purple-500/15 px-2 text-lg font-black text-purple-200">{formatarQuantidadeItem(item)}</span> : null}
                           <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => addProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
                             +
                           </button>
@@ -368,8 +368,8 @@ export default function Cardapio() {
                       )}
                     </div>
                     {buffet && item ? (
-                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-orange-500/10 px-3 py-2">
-                        <span className="text-sm font-bold text-orange-100">No carrinho: {formatarQuantidadeItem(item)}</span>
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
+                        <span className="text-sm font-bold text-purple-100">No carrinho: {formatarQuantidadeItem(item)}</span>
                         <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removeProduto(produto, buffetTipo === 'kg' ? Number(buffetValue || 0) : 1)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
                           -
                         </button>
@@ -385,7 +385,7 @@ export default function Cardapio() {
         )}
 
         {quantidade ? (
-          <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-orange-500/20 bg-[#0f1117]/95 p-4 shadow-2xl shadow-black/60 backdrop-blur">
+          <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-purple-500/25 bg-black/95 p-4 shadow-2xl shadow-purple-950/30 backdrop-blur">
             <button className="primary-button w-full justify-between rounded-xl px-5" type="button" onClick={confirmarPedido} disabled={saving}>
               <span>{saving ? 'Enviando...' : `Confirmar ${formatarQuantidadeTotal(quantidade)} item${quantidade === 1 ? '' : 's'}`}</span>
               <span>{moeda(total)}</span>

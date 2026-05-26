@@ -134,7 +134,7 @@ export default function Mesa() {
                         <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
                         <p className="mt-1 text-gray-400">Qtd. {item?.quantidade || 0}</p>
                       </div>
-                      <strong className="whitespace-nowrap text-lg text-orange-300">
+                      <strong className="whitespace-nowrap text-lg text-purple-300">
                         {moeda(Number(item?.preco || 0) * Number(item?.quantidade || 0))}
                       </strong>
                     </div>
@@ -145,10 +145,10 @@ export default function Mesa() {
               )}
             </div>
 
-            <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-orange-500/20 bg-[#0f1117]/95 p-4 shadow-2xl shadow-black/60 backdrop-blur">
+            <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-purple-500/25 bg-black/95 p-4 shadow-2xl shadow-purple-950/30 backdrop-blur">
               <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xl font-black">
                 <span className="text-gray-200">Total</span>
-                <span className="text-orange-300">{moeda(total)}</span>
+                <span className="text-purple-300">{moeda(total)}</span>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 <button className="primary-button" type="button" onClick={() => navigate(`/mesa/${numero}/cardapio`)}>
