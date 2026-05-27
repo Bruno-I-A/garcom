@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
 
+const BUFFET_KG_PRECO = 64;
+
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -387,7 +389,7 @@ export default function Cardapio() {
     }
 
     setError('');
-    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, 30);
+    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, BUFFET_KG_PRECO);
   }
 
   async function confirmarPedido() {
@@ -483,13 +485,13 @@ export default function Cardapio() {
                 const buffetTipo = tipoBuffet(produto);
                 const buffetValue = valorBuffetInput(produto);
                 const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
-                const buffetTotal = Number.isFinite(buffetQuantidade) ? 30 * buffetQuantidade : 0;
+                const buffetTotal = Number.isFinite(buffetQuantidade) ? BUFFET_KG_PRECO * buffetQuantidade : 0;
                 return (
                   <article className="rounded-xl border border-purple-400/15 bg-[#0a0610]/95 p-4 shadow-lg shadow-purple-950/20" key={id}>
                     <div className={buffet ? 'space-y-4' : 'flex items-center justify-between gap-3'}>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
-                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? 30 : preco)}</p>
+                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? BUFFET_KG_PRECO : preco)}</p>
                       </div>
                       {buffet ? (
                         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
