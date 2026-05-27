@@ -169,6 +169,38 @@ export function getCardapio() {
   return request('/cardapio');
 }
 
+export function getGruposAdicionaisCategoria(categoriaId) {
+  if (isDemoSession()) {
+    if (String(categoriaId) !== 'lanches') return Promise.resolve([]);
+
+    return Promise.resolve([
+      {
+        id: 'ponto',
+        nome: 'Ponto da carne',
+        tipo: 'unico',
+        obrigatorio: true,
+        itens: [
+          { id: 'mal', nome: 'Mal passado', preco: 0 },
+          { id: 'ponto-casa', nome: 'Ao ponto', preco: 0 },
+          { id: 'bem', nome: 'Bem passado', preco: 0 }
+        ]
+      },
+      {
+        id: 'extras',
+        nome: 'Extras',
+        tipo: 'multiplo',
+        obrigatorio: false,
+        itens: [
+          { id: 'bacon', nome: 'Bacon', preco: 6 },
+          { id: 'queijo', nome: 'Queijo extra', preco: 4 }
+        ]
+      }
+    ]);
+  }
+
+  return request(`/grupos-adicionais/categoria/${categoriaId}`);
+}
+
 export function criarPedido(pedido) {
   if (isDemoSession()) {
     return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });
