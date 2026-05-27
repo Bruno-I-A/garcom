@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
 
+const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
 
 function moeda(valor) {
@@ -382,6 +383,7 @@ export default function Cardapio() {
     const tipo = tipoBuffet(produto);
     const rawValue = valorBuffetInput(produto);
     const quantidadeBuffet = tipo === 'kg' ? Number(Number(rawValue).toFixed(3)) : Math.floor(Number(rawValue));
+    const precoBuffet = tipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
 
     if (!quantidadeBuffet || quantidadeBuffet <= 0) {
       setError(tipo === 'kg' ? 'Informe o peso do buffet.' : 'Informe o número de pessoas.');
@@ -389,7 +391,7 @@ export default function Cardapio() {
     }
 
     setError('');
-    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, BUFFET_KG_PRECO);
+    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, precoBuffet);
   }
 
   async function confirmarPedido() {
@@ -484,14 +486,15 @@ export default function Cardapio() {
                 const buffet = isProdutoBuffet(produto, categoriaAtual.nome);
                 const buffetTipo = tipoBuffet(produto);
                 const buffetValue = valorBuffetInput(produto);
+                const buffetPreco = buffetTipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
                 const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
-                const buffetTotal = Number.isFinite(buffetQuantidade) ? BUFFET_KG_PRECO * buffetQuantidade : 0;
+                const buffetTotal = Number.isFinite(buffetQuantidade) ? buffetPreco * buffetQuantidade : 0;
                 return (
                   <article className="rounded-xl border border-purple-400/15 bg-[#0a0610]/95 p-4 shadow-lg shadow-purple-950/20" key={id}>
                     <div className={buffet ? 'space-y-4' : 'flex items-center justify-between gap-3'}>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
-                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? BUFFET_KG_PRECO : preco)}</p>
+                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? buffetPreco : preco)}</p>
                       </div>
                       {buffet ? (
                         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
