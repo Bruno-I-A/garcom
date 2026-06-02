@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { asArray, atualizarPedidoStatus, getPedidosAbertos, reimprimirPedido } from '../services/api.js';
+import { asArray, atualizarPedidoStatus, getPedidosAbertos, reimprimirPedido, removerItemPedido } from '../services/api.js';
 
 function getPedidoId(pedido) {
   return pedido?.id || pedido?._id || pedido?.pedido_id;
@@ -27,6 +27,7 @@ export default function Mesa() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [removendo, setRemovendo] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -102,6 +103,33 @@ export default function Mesa() {
     }
   }
 
+  async function removerItem(item) {
+    const pedidoId = getPedidoId(pedido);
+    const itemId = item?.id || item?._id || item?.item_id;
+    if (!pedidoId || !itemId) {
+      setError('Não foi possível identificar o item para remover.');
+      return;
+    }
+
+    if (!window.confirm(`Remover "${item?.nome || 'item'}" do pedido?`)) return;
+
+    setRemovendo(itemId);
+    setError('');
+    setSuccess('');
+    try {
+      await removerItemPedido(pedidoId, itemId);
+      setPedido((atual) => {
+        if (!atual) return atual;
+        const novosItens = itensDoPedido(atual).filter((i) => (i?.id || i?._id || i?.item_id) !== itemId);
+        return { ...atual, itens: novosItens };
+      });
+    } catch (err) {
+      setError(err.message || 'Não foi possível remover o item.');
+    } finally {
+      setRemovendo(null);
+    }
+  }
+
   return (
     <main className="app-shell">
       <div className="mobile-page">
@@ -127,19 +155,34 @@ export default function Mesa() {
           <section className="space-y-4 pb-40">
             <div className="space-y-3">
               {itens.length ? (
-                itens.map((item, index) => (
-                  <article className="card" key={`${item?.id || item?.nome || index}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
-                        <p className="mt-1 text-gray-400">Qtd. {item?.quantidade || 0}</p>
+                itens.map((item, index) => {
+                  const itemId = item?.id || item?._id || item?.item_id;
+                  const estaRemovendo = removendo === itemId;
+                  return (
+                    <article className="card" key={`${itemId || item?.nome || index}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
+                          <p className="mt-1 text-gray-400">Qtd. {item?.quantidade || 0}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <strong className="whitespace-nowrap text-lg text-purple-300">
+                            {moeda(Number(item?.preco || 0) * Number(item?.quantidade || 0))}
+                          </strong>
+                          <button
+                            className="danger-button h-10 min-h-10 w-10 shrink-0 px-0 text-xl"
+                            type="button"
+                            onClick={() => removerItem(item)}
+                            disabled={!!removendo || saving}
+                            aria-label={`Remover ${item?.nome || 'item'}`}
+                          >
+                            {estaRemovendo ? '…' : '×'}
+                          </button>
+                        </div>
                       </div>
-                      <strong className="whitespace-nowrap text-lg text-purple-300">
-                        {moeda(Number(item?.preco || 0) * Number(item?.quantidade || 0))}
-                      </strong>
-                    </div>
-                  </article>
-                ))
+                    </article>
+                  );
+                })
               ) : (
                 <p className="card text-gray-300">Pedido sem itens cadastrados.</p>
               )}

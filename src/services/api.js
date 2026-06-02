@@ -244,6 +244,16 @@ export function reimprimirPedido(pedidoId) {
   });
 }
 
+export function removerItemPedido(pedidoId, itemId) {
+  if (isDemoSession()) {
+    return Promise.resolve({ id: pedidoId, itemId });
+  }
+
+  return request(`/pedidos/${pedidoId}/itens/${itemId}`, {
+    method: 'DELETE'
+  });
+}
+
 export function asArray(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.data)) return data.data;
