@@ -136,6 +136,7 @@ export default function Cardapio() {
   const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
+  const [busca, setBusca] = useState('');
   const [cart, setCart] = useState({});
   const [buffetInputs, setBuffetInputs] = useState({});
   const [itemModal, setItemModal] = useState(null);
@@ -192,6 +193,12 @@ export default function Cardapio() {
 
     return Array.from(groups.values());
   }, [categorias, produtos]);
+
+  const resultadosBusca = useMemo(() => {
+    const termo = normalizarTexto(busca);
+    if (!termo) return [];
+    return produtos.filter((p) => normalizarTexto(p?.nome || p?.name || '').includes(termo));
+  }, [busca, produtos]);
 
   const categoriaAtual = useMemo(() => {
     return categoriasOrdenadas.find((categoria) => categoria.id === categoriaSelecionada) || null;
@@ -439,7 +446,19 @@ export default function Cardapio() {
     <main className="app-shell">
       <div className="mobile-page">
         {!categoriaAtual ? (
-          <Header title={`Cardápio - Mesa ${numero}`} showBack />
+          <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
+            <Header title={`Cardápio - Mesa ${numero}`} showBack />
+            <div className="mt-3">
+              <input
+                className="field w-full text-base"
+                type="search"
+                placeholder="Buscar item..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                aria-label="Buscar item no cardápio"
+              />
+            </div>
+          </header>
         ) : (
           <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
             <div className="flex min-h-12 items-center gap-3">
@@ -457,7 +476,83 @@ export default function Cardapio() {
         {loading ? <p className="card border-gray-700 text-center text-gray-200">Carregando cardápio...</p> : null}
         {error ? <p className="mb-4 rounded-xl border border-red-500/60 bg-red-950/40 p-3 text-red-100">{error}</p> : null}
 
-        {!categoriaAtual ? (
+        {!categoriaAtual && busca ? (
+          <section className={quantidade ? 'space-y-3 pb-32' : 'space-y-3 pb-6'}>
+            {!resultadosBusca.length ? (
+              <p className="card border-gray-700 text-gray-300">Nenhum item encontrado para "{busca}".</p>
+            ) : (
+              resultadosBusca.map((produto) => {
+                const id = produtoId(produto);
+                const itemQuantidade = quantidadeProduto(produto);
+                const preco = Number(produto?.preco || produto?.price || 0);
+                const categoriaDoProduto = categoriasOrdenadas.find((c) => c.items.some((p) => produtoId(p) === id));
+                const buffet = isProdutoBuffet(produto, categoriaDoProduto?.nome || '');
+                const buffetTipo = tipoBuffet(produto);
+                const buffetValue = valorBuffetInput(produto);
+                const buffetPreco = buffetTipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
+                const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
+                const buffetTotal = Number.isFinite(buffetQuantidade) ? buffetPreco * buffetQuantidade : 0;
+                return (
+                  <article className="rounded-xl border border-purple-400/15 bg-[#0a0610]/95 p-4 shadow-lg shadow-purple-950/20" key={id}>
+                    {categoriaDoProduto ? (
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-400">{categoriaDoProduto.nome}</p>
+                    ) : null}
+                    <div className={buffet ? 'space-y-4' : 'flex items-center justify-between gap-3'}>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-lg font-bold text-white">{produto?.nome || produto?.name || 'Produto'}</h2>
+                        <p className="mt-1 text-base font-semibold text-purple-300">{moeda(buffet ? buffetPreco : preco)}</p>
+                      </div>
+                      {buffet ? (
+                        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                          <label className="block">
+                            <span className="mb-2 block text-sm font-bold text-gray-300">{buffetTipo === 'kg' ? 'Peso em kg (ex: 0.850)' : 'Número de pessoas'}</span>
+                            <input
+                              className="field text-base"
+                              type="number"
+                              step={buffetTipo === 'kg' ? '0.001' : '1'}
+                              min={buffetTipo === 'kg' ? '0.1' : '1'}
+                              value={buffetValue}
+                              onChange={(event) => setValorBuffetInput(produto, event.target.value)}
+                              onBlur={() => {
+                                if (buffetTipo === 'kg' && Number(buffetValue) > 0) {
+                                  setValorBuffetInput(produto, Number(buffetValue).toFixed(3));
+                                }
+                              }}
+                            />
+                            <span className="mt-2 block text-sm font-semibold text-purple-300">Total: {moeda(buffetTotal)}</span>
+                          </label>
+                          <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => abrirModalBuffetProduto(produto)} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {itemQuantidade ? (
+                            <button className="secondary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => removeProduto(produto)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                              -
+                            </button>
+                          ) : null}
+                          {itemQuantidade ? <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-purple-500/15 px-2 text-lg font-black text-purple-200">{formatarQuantidadeTotal(itemQuantidade)}</span> : null}
+                          <button className="primary-button h-14 min-h-14 w-14 rounded-xl px-0 text-3xl" type="button" onClick={() => abrirModalProduto(produto, categoriaDoProduto || { nome: '', items: [] })} aria-label={`Adicionar ${produto?.nome || 'produto'}`}>
+                            +
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {buffet && itemQuantidade ? (
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
+                        <span className="text-sm font-bold text-purple-100">No carrinho: {formatarQuantidadeTotal(itemQuantidade)}</span>
+                        <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removeProduto(produto, buffetTipo === 'kg' ? Number(buffetValue || 0) : 1)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                          -
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })
+            )}
+          </section>
+        ) : !categoriaAtual ? (
           <section className={quantidade ? 'grid grid-cols-2 gap-3 pb-32' : 'grid grid-cols-2 gap-3 pb-6'}>
             {!loading && !categoriasOrdenadas.length ? <p className="card col-span-2 border-gray-700 text-gray-300">Nenhuma categoria encontrada.</p> : null}
 
