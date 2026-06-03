@@ -113,15 +113,16 @@ export default function Mesa() {
 
     if (!window.confirm(`Remover "${item?.nome || 'item'}" do pedido?`)) return;
 
+    const itensRestantes = itensDoPedido(pedido).filter((i) => (i?.id || i?._id || i?.item_id) !== itemId);
+
     setRemovendo(itemId);
     setError('');
     setSuccess('');
     try {
-      await removerItemPedido(pedidoId, itemId);
+      await removerItemPedido(pedidoId, itemId, itensRestantes);
       setPedido((atual) => {
         if (!atual) return atual;
-        const novosItens = itensDoPedido(atual).filter((i) => (i?.id || i?._id || i?.item_id) !== itemId);
-        return { ...atual, itens: novosItens };
+        return { ...atual, itens: itensRestantes };
       });
     } catch (err) {
       setError(err.message || 'Não foi possível remover o item.');

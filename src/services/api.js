@@ -244,14 +244,19 @@ export function reimprimirPedido(pedidoId) {
   });
 }
 
-export function removerItemPedido(pedidoId, itemId) {
+export function removerItemPedido(pedidoId, itemId, itensRestantes) {
   if (isDemoSession()) {
     return Promise.resolve({ id: pedidoId, itemId });
   }
 
   return request(`/pedidos/${pedidoId}/itens/${itemId}`, {
     method: 'DELETE'
-  });
+  }).catch(() =>
+    request(`/pedidos/${pedidoId}/itens`, {
+      method: 'PATCH',
+      body: JSON.stringify({ itens: itensRestantes })
+    })
+  );
 }
 
 export function asArray(data) {
