@@ -401,6 +401,8 @@ export default function Cardapio() {
     abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, precoBuffet);
   }
 
+  const isBalcao = numero === 'balcao';
+
   async function confirmarPedido() {
     if (!cartItems.length) {
       setError('Adicione pelo menos um item ao pedido.');
@@ -411,8 +413,8 @@ export default function Cardapio() {
     const pedido = {
       itens: cartItems,
       total,
-      tipo_entrega: 'mesa',
-      mesa: String(numero),
+      tipo_entrega: isBalcao ? 'balcao' : 'mesa',
+      mesa: isBalcao ? null : String(numero),
       origem: 'garcom',
       garcom_id: garcom.id || garcom._id || garcom.garcom_id || null,
       garcom_nome: garcom.nome || garcom.name || garcom.usuario || 'Garçom',
@@ -424,17 +426,22 @@ export default function Cardapio() {
     setSaving(true);
     setError('');
     try {
-      const pedidos = asArray(await getPedidosAbertos());
-      const pedidoExistente = pedidos.find((item) => mesaDoPedido(item) === String(numero) && pedidoAberto(item));
-      const pedidoExistenteId = pedidoId(pedidoExistente);
-
-      if (pedidoExistenteId) {
-        await adicionarItensPedido(pedidoExistenteId, cartItems);
-      } else {
+      if (isBalcao) {
         await criarPedido(pedido);
-      }
+        navigate('/mesas', { replace: true });
+      } else {
+        const pedidos = asArray(await getPedidosAbertos());
+        const pedidoExistente = pedidos.find((item) => mesaDoPedido(item) === String(numero) && pedidoAberto(item));
+        const pedidoExistenteId = pedidoId(pedidoExistente);
 
-      navigate(`/mesa/${numero}`, { replace: true });
+        if (pedidoExistenteId) {
+          await adicionarItensPedido(pedidoExistenteId, cartItems);
+        } else {
+          await criarPedido(pedido);
+        }
+
+        navigate(`/mesa/${numero}`, { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Não foi possível confirmar o pedido.');
     } finally {
@@ -447,7 +454,7 @@ export default function Cardapio() {
       <div className="mobile-page">
         {!categoriaAtual ? (
           <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
-            <Header title={`Cardápio - Mesa ${numero}`} showBack />
+            <Header title={isBalcao ? 'Cardápio - Balcão' : `Cardápio - Mesa ${numero}`} showBack />
             <div className="mt-3">
               <input
                 className="field w-full text-base"
@@ -467,7 +474,7 @@ export default function Cardapio() {
               </button>
               <div className="min-w-0 flex-1">
                 <h1 className="truncate text-2xl font-black text-white">{categoriaAtual.nome}</h1>
-                <p className="truncate text-sm text-gray-400">Mesa {numero}</p>
+                <p className="truncate text-sm text-gray-400">{isBalcao ? 'Balcão' : `Mesa ${numero}`}</p>
               </div>
             </div>
           </header>

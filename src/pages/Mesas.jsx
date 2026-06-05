@@ -59,6 +59,17 @@ export default function Mesas() {
         {loading ? <p className="card border-gray-700 text-center text-gray-200">Carregando mesas...</p> : null}
         {error ? <p className="card border-red-500/60 bg-red-950/40 text-red-100">{error}</p> : null}
 
+        <section className="pb-4">
+          <button
+            className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-950/25 px-5 py-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98]"
+            type="button"
+            onClick={() => navigate('/mesa/balcao/cardapio')}
+          >
+            <span className="text-xl font-black text-emerald-200">Pedido Balcão</span>
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-300">Sem mesa →</span>
+          </button>
+        </section>
+
         <section className="grid grid-cols-2 gap-3 pb-4">
           {!loading && !mesas.length ? <p className="card col-span-2 text-gray-300">Nenhuma mesa ativa encontrada.</p> : null}
 
