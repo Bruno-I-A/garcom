@@ -63,7 +63,7 @@ export default function Mesas() {
           <button
             className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-950/25 px-5 py-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98]"
             type="button"
-            onClick={() => navigate('/mesa/balcao/cardapio')}
+            onClick={() => navigate('/balcao')}
           >
             <span className="text-xl font-black text-emerald-200">Pedido Balcão</span>
             <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-300">Sem mesa →</span>

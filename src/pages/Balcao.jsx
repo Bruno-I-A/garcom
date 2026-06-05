@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
+import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposAdicionaisCategoria } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
@@ -13,7 +13,7 @@ function moeda(valor) {
 function normalizarTexto(valor) {
   return String(valor || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 }
 
@@ -75,19 +75,6 @@ function itemTotalUnitario(item) {
   return Number(item?.preco || 0) + precoAdicionaisItem(item);
 }
 
-function pedidoId(pedido) {
-  return pedido?.id || pedido?._id || pedido?.pedido_id;
-}
-
-function mesaDoPedido(pedido) {
-  return String(pedido?.mesa || pedido?.numero_mesa || pedido?.mesa_numero || '');
-}
-
-function pedidoAberto(pedido) {
-  const status = String(pedido?.status || '').toLowerCase();
-  return status !== 'entregue' && status !== 'cancelado';
-}
-
 function categoriaVisual(nome, index) {
   const value = normalizarTexto(nome);
   const fallback = [
@@ -100,39 +87,24 @@ function categoriaVisual(nome, index) {
   if (value.includes('bebida') || value.includes('suco') || value.includes('drink') || value.includes('refri')) {
     return { icon: '🥤', tone: 'from-cyan-500/25 to-blue-400/10' };
   }
-  if (value.includes('buffet')) {
-    return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
-  }
+  if (value.includes('buffet')) return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
   if (value.includes('xis') || value.includes('lanche') || value.includes('burger') || value.includes('burguer') || value.includes('hamb')) {
     return { icon: '🍔', tone: 'from-fuchsia-500/25 to-purple-400/10' };
   }
-  if (value.includes('combo')) {
-    return { icon: '🍱', tone: 'from-emerald-500/25 to-lime-400/10' };
-  }
-  if (value.includes('frango')) {
-    return { icon: '🍗', tone: 'from-violet-500/25 to-cyan-400/10' };
-  }
-  if (value.includes('porç') || value.includes('porc')) {
-    return { icon: '🍟', tone: 'from-indigo-500/25 to-purple-400/10' };
-  }
-  if (value.includes('sobremesa') || value.includes('doce')) {
-    return { icon: '🍮', tone: 'from-pink-500/25 to-rose-400/10' };
-  }
-  if (value.includes('pizza')) {
-    return { icon: '🍕', tone: 'from-red-500/25 to-yellow-400/10' };
-  }
-  if (value.includes('cafe') || value.includes('caf')) {
-    return { icon: '☕', tone: 'from-stone-500/25 to-purple-400/10' };
-  }
-  if (value.includes('prato') || value.includes('refei')) {
-    return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
-  }
+  if (value.includes('combo')) return { icon: '🍱', tone: 'from-emerald-500/25 to-lime-400/10' };
+  if (value.includes('frango')) return { icon: '🍗', tone: 'from-violet-500/25 to-cyan-400/10' };
+  if (value.includes('porç') || value.includes('porc')) return { icon: '🍟', tone: 'from-indigo-500/25 to-purple-400/10' };
+  if (value.includes('sobremesa') || value.includes('doce')) return { icon: '🍮', tone: 'from-pink-500/25 to-rose-400/10' };
+  if (value.includes('pizza')) return { icon: '🍕', tone: 'from-red-500/25 to-yellow-400/10' };
+  if (value.includes('cafe') || value.includes('caf')) return { icon: '☕', tone: 'from-stone-500/25 to-purple-400/10' };
+  if (value.includes('prato') || value.includes('refei')) return { icon: '🍽️', tone: 'from-purple-500/30 to-fuchsia-400/10' };
   return fallback[index % fallback.length];
 }
 
-export default function Cardapio() {
-  const { numero } = useParams();
+export default function Balcao() {
   const navigate = useNavigate();
+  const [tipoEntrega, setTipoEntrega] = useState('balcao');
+  const [nomeCliente, setNomeCliente] = useState('');
   const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
@@ -164,9 +136,7 @@ export default function Cardapio() {
     }
 
     load();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   const categoriasOrdenadas = useMemo(() => {
@@ -314,12 +284,7 @@ export default function Cardapio() {
     } catch (err) {
       setItemModal((current) =>
         current?.produto === produto
-          ? {
-              ...current,
-              grupos: [],
-              loading: false,
-              error: err.message || 'Não foi possível carregar os adicionais.'
-            }
+          ? { ...current, grupos: [], loading: false, error: err.message || 'Não foi possível carregar os adicionais.' }
           : current
       );
     }
@@ -359,17 +324,9 @@ export default function Cardapio() {
         const selectedIds = Array.isArray(selected) ? selected : selected ? [selected] : [];
         const itensSelecionados = grupoItens(grupo)
           .filter((item) => selectedIds.includes(String(adicionalId(item))))
-          .map((item) => ({
-            id: adicionalId(item),
-            nome: adicionalNome(item),
-            preco: adicionalPreco(item)
-          }));
+          .map((item) => ({ id: adicionalId(item), nome: adicionalNome(item), preco: adicionalPreco(item) }));
 
-        return {
-          grupo_id: grupoId(grupo),
-          grupo_nome: grupoNome(grupo),
-          itens_selecionados: itensSelecionados
-        };
+        return { grupo_id: grupoId(grupo), grupo_nome: grupoNome(grupo), itens_selecionados: itensSelecionados };
       })
       .filter((grupo) => grupo.itens_selecionados.length > 0);
   }
@@ -411,8 +368,9 @@ export default function Cardapio() {
     const pedido = {
       itens: cartItems,
       total,
-      tipo_entrega: 'mesa',
-      mesa: String(numero),
+      tipo_entrega: tipoEntrega,
+      mesa: null,
+      nome_cliente: nomeCliente.trim() || null,
       origem: 'garcom',
       garcom_id: garcom.id || garcom._id || garcom.garcom_id || null,
       garcom_nome: garcom.nome || garcom.name || garcom.usuario || 'Garçom',
@@ -424,17 +382,8 @@ export default function Cardapio() {
     setSaving(true);
     setError('');
     try {
-      const pedidos = asArray(await getPedidosAbertos());
-      const pedidoExistente = pedidos.find((item) => mesaDoPedido(item) === String(numero) && pedidoAberto(item));
-      const pedidoExistenteId = pedidoId(pedidoExistente);
-
-      if (pedidoExistenteId) {
-        await adicionarItensPedido(pedidoExistenteId, cartItems);
-      } else {
-        await criarPedido(pedido);
-      }
-
-      navigate(`/mesa/${numero}`, { replace: true });
+      await criarPedido(pedido);
+      navigate('/mesas', { replace: true });
     } catch (err) {
       setError(err.message || 'Não foi possível confirmar o pedido.');
     } finally {
@@ -447,8 +396,37 @@ export default function Cardapio() {
       <div className="mobile-page">
         {!categoriaAtual ? (
           <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
-            <Header title={`Cardápio - Mesa ${numero}`} showBack />
+            <Header title="Pedido no Balcão" showBack />
+
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'balcao' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                onClick={() => setTipoEntrega('balcao')}
+              >
+                Retirada no balcão
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'delivery' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                onClick={() => setTipoEntrega('delivery')}
+              >
+                Delivery
+              </button>
+            </div>
+
             <div className="mt-3">
+              <input
+                className="field w-full text-base"
+                type="text"
+                placeholder="Nome do cliente (opcional)"
+                value={nomeCliente}
+                onChange={(e) => setNomeCliente(e.target.value)}
+                aria-label="Nome do cliente"
+              />
+            </div>
+
+            <div className="mt-2">
               <input
                 className="field w-full text-base"
                 type="search"
@@ -467,7 +445,7 @@ export default function Cardapio() {
               </button>
               <div className="min-w-0 flex-1">
                 <h1 className="truncate text-2xl font-black text-white">{categoriaAtual.nome}</h1>
-                <p className="truncate text-sm text-gray-400">Mesa {numero}</p>
+                <p className="truncate text-sm text-gray-400">{tipoEntrega === 'delivery' ? 'Delivery' : 'Balcão'}{nomeCliente.trim() ? ` · ${nomeCliente.trim()}` : ''}</p>
               </div>
             </div>
           </header>
