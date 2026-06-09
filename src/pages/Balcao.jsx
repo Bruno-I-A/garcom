@@ -394,13 +394,20 @@ export default function Balcao() {
     const garcom = getGarcom() || {};
     const garcomNome = getGarcomNome(garcom);
     const clienteNome = nomeCliente.trim() || null;
+    const endereco = tipoEntrega === 'delivery' ? enderecoEntrega.trim() : null;
+    const local = tipoEntrega === 'delivery' ? TAXAS_ENTREGA[localEntrega]?.nome || null : null;
     const pedido = {
       itens: cartItems,
       total,
       subtotal,
       taxa_entrega: taxaEntrega,
-      local_entrega: tipoEntrega === 'delivery' ? TAXAS_ENTREGA[localEntrega]?.nome || null : null,
-      endereco_entrega: tipoEntrega === 'delivery' ? enderecoEntrega.trim() : null,
+      local_entrega: local,
+      bairro_entrega: local,
+      endereco_entrega: endereco,
+      endereco,
+      endereco_cliente: endereco,
+      endereco_delivery: endereco,
+      entrega: tipoEntrega === 'delivery' ? { local, endereco, taxa: taxaEntrega } : null,
       tipo_entrega: tipoEntrega,
       mesa: null,
       nome_cliente: clienteNome,
