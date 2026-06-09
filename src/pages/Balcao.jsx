@@ -71,12 +71,14 @@ function adicionalPreco(item) {
   return Number(item?.preco || item?.price || item?.valor || 0);
 }
 
-function grupoEhCobertura(grupo) {
-  return normalizarTexto(grupoNome(grupo)).includes('cobertura');
+function ehPedidoDeCobertura(grupo, produto) {
+  const grupoNomeNormalizado = normalizarTexto(grupoNome(grupo));
+  const produtoNome = normalizarTexto(produto?.nome || produto?.name || '');
+  return grupoNomeNormalizado.includes('cobertura') || produtoNome.includes('cobertura');
 }
 
-function precoAdicionalSelecionado(grupo, index, item) {
-  if (grupoEhCobertura(grupo)) {
+function precoAdicionalSelecionado(grupo, index, item, produto) {
+  if (ehPedidoDeCobertura(grupo, produto)) {
     return index < COBERTURAS_GRATIS ? 0 : PRECO_COBERTURA_EXTRA;
   }
   return adicionalPreco(item);
@@ -345,7 +347,7 @@ export default function Balcao() {
         const selectedIds = Array.isArray(selected) ? selected : selected ? [selected] : [];
         const itensSelecionados = grupoItens(grupo)
           .filter((item) => selectedIds.includes(String(adicionalId(item))))
-          .map((item, index) => ({ id: adicionalId(item), nome: adicionalNome(item), preco: precoAdicionalSelecionado(grupo, index, item) }));
+          .map((item, index) => ({ id: adicionalId(item), nome: adicionalNome(item), preco: precoAdicionalSelecionado(grupo, index, item, itemModal.produto) }));
 
         return { grupo_id: grupoId(grupo), grupo_nome: grupoNome(grupo), itens_selecionados: itensSelecionados };
       })
@@ -753,7 +755,7 @@ export default function Balcao() {
                           {grupoNome(grupo)}
                           {grupoObrigatorio(grupo) ? <span className="ml-2 text-sm font-bold text-purple-300">Obrigatório</span> : null}
                         </legend>
-                        {grupoEhCobertura(grupo) ? (
+                        {ehPedidoDeCobertura(grupo, itemModal.produto) ? (
                           <p className="mt-1 px-1 text-sm font-semibold text-purple-200">
                             {COBERTURAS_GRATIS} coberturas grátis; extras + {moeda(PRECO_COBERTURA_EXTRA)} cada.
                           </p>
