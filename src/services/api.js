@@ -25,6 +25,22 @@ export function getGarcom() {
   return getStoredJson(GARCOM_KEY);
 }
 
+export function getGarcomNome(garcom = getGarcom()) {
+  if (typeof garcom === 'string') return garcom;
+  return (
+    garcom?.nome ||
+    garcom?.name ||
+    garcom?.nome_completo ||
+    garcom?.nomeCompleto ||
+    garcom?.nome_garcom ||
+    garcom?.garcom_nome ||
+    garcom?.usuario ||
+    garcom?.username ||
+    garcom?.login ||
+    'Garçom'
+  );
+}
+
 export function isDemoSession() {
   return getToken() === DEMO_TOKEN;
 }
@@ -41,7 +57,8 @@ export function clearSession() {
 
 function normalizeLoginResponse(data) {
   const token = data?.token || data?.jwt || data?.access_token;
-  const garcom = data?.garcom || data?.usuario || data?.user || data;
+  const garcomData = data?.garcom || data?.usuario || data?.user || data;
+  const garcom = typeof garcomData === 'string' ? { usuario: garcomData } : garcomData;
   return { token, garcom };
 }
 
@@ -96,6 +113,10 @@ export async function login(usuario, senha) {
 
   if (!session.token) {
     throw new Error('Login realizado, mas o token não foi retornado pela API.');
+  }
+
+  if (session.garcom && typeof session.garcom === 'object' && !session.garcom.usuario) {
+    session.garcom.usuario = usuario;
   }
 
   saveSession(session.token, session.garcom);

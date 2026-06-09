@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
+import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
@@ -421,6 +421,7 @@ export default function Cardapio() {
     }
 
     const garcom = getGarcom() || {};
+    const garcomNome = getGarcomNome(garcom);
     const pedido = {
       itens: cartItems,
       total,
@@ -428,7 +429,8 @@ export default function Cardapio() {
       mesa: String(numero),
       origem: 'garcom',
       garcom_id: garcom.id || garcom._id || garcom.garcom_id || null,
-      garcom_nome: garcom.nome || garcom.name || garcom.usuario || 'Garçom',
+      garcom_nome: garcomNome,
+      garcom: garcomNome,
       forma_pagamento: null,
       numero_whatsapp: null,
       status: 'novo'

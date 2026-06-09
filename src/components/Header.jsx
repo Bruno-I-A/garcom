@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { clearSession, getGarcom } from '../services/api.js';
+import { clearSession, getGarcom, getGarcomNome } from '../services/api.js';
 
 export default function Header({ title, showBack = false, showLogout = false }) {
   const navigate = useNavigate();
   const garcom = getGarcom();
-  const garcomNome = garcom?.nome || garcom?.usuario || garcom?.name || 'Garçom';
+  const garcomNome = getGarcomNome(garcom);
 
   function handleLogout() {
     clearSession();
