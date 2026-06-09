@@ -5,6 +5,8 @@ import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias,
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
+const COBERTURAS_GRATIS = 2;
+const PRECO_COBERTURA_EXTRA = 6;
 
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -63,6 +65,17 @@ function adicionalNome(item) {
 
 function adicionalPreco(item) {
   return Number(item?.preco || item?.price || item?.valor || 0);
+}
+
+function grupoEhCobertura(grupo) {
+  return normalizarTexto(grupoNome(grupo)).includes('cobertura');
+}
+
+function precoAdicionalSelecionado(grupo, index, item) {
+  if (grupoEhCobertura(grupo)) {
+    return index < COBERTURAS_GRATIS ? 0 : PRECO_COBERTURA_EXTRA;
+  }
+  return adicionalPreco(item);
 }
 
 function precoAdicionaisItem(item) {
@@ -359,10 +372,10 @@ export default function Cardapio() {
         const selectedIds = Array.isArray(selected) ? selected : selected ? [selected] : [];
         const itensSelecionados = grupoItens(grupo)
           .filter((item) => selectedIds.includes(String(adicionalId(item))))
-          .map((item) => ({
+          .map((item, index) => ({
             id: adicionalId(item),
             nome: adicionalNome(item),
-            preco: adicionalPreco(item)
+            preco: precoAdicionalSelecionado(grupo, index, item)
           }));
 
         return {
@@ -707,6 +720,11 @@ export default function Cardapio() {
                           {grupoNome(grupo)}
                           {grupoObrigatorio(grupo) ? <span className="ml-2 text-sm font-bold text-purple-300">Obrigatório</span> : null}
                         </legend>
+                        {grupoEhCobertura(grupo) ? (
+                          <p className="mt-1 px-1 text-sm font-semibold text-purple-200">
+                            {COBERTURAS_GRATIS} coberturas grátis; extras + {moeda(PRECO_COBERTURA_EXTRA)} cada.
+                          </p>
+                        ) : null}
                         <div className="mt-2 space-y-2">
                           {grupoItens(grupo).map((adicional) => {
                             const aId = String(adicionalId(adicional));

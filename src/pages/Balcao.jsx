@@ -5,6 +5,8 @@ import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposA
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
+const COBERTURAS_GRATIS = 2;
+const PRECO_COBERTURA_EXTRA = 6;
 const TAXAS_ENTREGA = {
   getulio: { nome: 'Getúlio', valor: 10 },
   estacao: { nome: 'Estação', valor: 20 }
@@ -69,6 +71,17 @@ function adicionalPreco(item) {
   return Number(item?.preco || item?.price || item?.valor || 0);
 }
 
+function grupoEhCobertura(grupo) {
+  return normalizarTexto(grupoNome(grupo)).includes('cobertura');
+}
+
+function precoAdicionalSelecionado(grupo, index, item) {
+  if (grupoEhCobertura(grupo)) {
+    return index < COBERTURAS_GRATIS ? 0 : PRECO_COBERTURA_EXTRA;
+  }
+  return adicionalPreco(item);
+}
+
 function precoAdicionaisItem(item) {
   return asArray(item?.adicionais).reduce((acc, grupo) => {
     return acc + asArray(grupo?.itens_selecionados).reduce((sum, adicional) => sum + Number(adicional?.preco || 0), 0);
@@ -110,6 +123,7 @@ export default function Balcao() {
   const [tipoEntrega, setTipoEntrega] = useState('balcao');
   const [localEntrega, setLocalEntrega] = useState('getulio');
   const [nomeCliente, setNomeCliente] = useState('');
+  const [enderecoEntrega, setEnderecoEntrega] = useState('');
   const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
@@ -331,7 +345,7 @@ export default function Balcao() {
         const selectedIds = Array.isArray(selected) ? selected : selected ? [selected] : [];
         const itensSelecionados = grupoItens(grupo)
           .filter((item) => selectedIds.includes(String(adicionalId(item))))
-          .map((item) => ({ id: adicionalId(item), nome: adicionalNome(item), preco: adicionalPreco(item) }));
+          .map((item, index) => ({ id: adicionalId(item), nome: adicionalNome(item), preco: precoAdicionalSelecionado(grupo, index, item) }));
 
         return { grupo_id: grupoId(grupo), grupo_nome: grupoNome(grupo), itens_selecionados: itensSelecionados };
       })
@@ -370,6 +384,10 @@ export default function Balcao() {
       setError('Adicione pelo menos um item ao pedido.');
       return;
     }
+    if (tipoEntrega === 'delivery' && !enderecoEntrega.trim()) {
+      setError('Informe o endereço de entrega.');
+      return;
+    }
 
     const garcom = getGarcom() || {};
     const pedido = {
@@ -378,6 +396,7 @@ export default function Balcao() {
       subtotal,
       taxa_entrega: taxaEntrega,
       local_entrega: tipoEntrega === 'delivery' ? TAXAS_ENTREGA[localEntrega]?.nome || null : null,
+      endereco_entrega: tipoEntrega === 'delivery' ? enderecoEntrega.trim() : null,
       tipo_entrega: tipoEntrega,
       mesa: null,
       nome_cliente: nomeCliente.trim() || null,
@@ -450,6 +469,19 @@ export default function Balcao() {
                 aria-label="Nome do cliente"
               />
             </div>
+
+            {tipoEntrega === 'delivery' ? (
+              <div className="mt-2">
+                <input
+                  className="field w-full text-base"
+                  type="text"
+                  placeholder="Endereço de entrega"
+                  value={enderecoEntrega}
+                  onChange={(e) => setEnderecoEntrega(e.target.value)}
+                  aria-label="Endereço de entrega"
+                />
+              </div>
+            ) : null}
 
             <div className="mt-2">
               <input
@@ -716,6 +748,11 @@ export default function Balcao() {
                           {grupoNome(grupo)}
                           {grupoObrigatorio(grupo) ? <span className="ml-2 text-sm font-bold text-purple-300">Obrigatório</span> : null}
                         </legend>
+                        {grupoEhCobertura(grupo) ? (
+                          <p className="mt-1 px-1 text-sm font-semibold text-purple-200">
+                            {COBERTURAS_GRATIS} coberturas grátis; extras + {moeda(PRECO_COBERTURA_EXTRA)} cada.
+                          </p>
+                        ) : null}
                         <div className="mt-2 space-y-2">
                           {grupoItens(grupo).map((adicional) => {
                             const aId = String(adicionalId(adicional));
