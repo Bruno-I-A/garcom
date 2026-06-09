@@ -5,6 +5,10 @@ import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGruposA
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
+const TAXAS_ENTREGA = {
+  getulio: { nome: 'Getúlio', valor: 10 },
+  estacao: { nome: 'Estação', valor: 20 }
+};
 
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -104,6 +108,7 @@ function categoriaVisual(nome, index) {
 export default function Balcao() {
   const navigate = useNavigate();
   const [tipoEntrega, setTipoEntrega] = useState('balcao');
+  const [localEntrega, setLocalEntrega] = useState('getulio');
   const [nomeCliente, setNomeCliente] = useState('');
   const [categorias, setCategorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -176,7 +181,9 @@ export default function Balcao() {
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const quantidade = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantidade, 0), [cartItems]);
-  const total = useMemo(() => cartItems.reduce((acc, item) => acc + itemTotalUnitario(item) * item.quantidade, 0), [cartItems]);
+  const subtotal = useMemo(() => cartItems.reduce((acc, item) => acc + itemTotalUnitario(item) * item.quantidade, 0), [cartItems]);
+  const taxaEntrega = tipoEntrega === 'delivery' ? Number(TAXAS_ENTREGA[localEntrega]?.valor || 0) : 0;
+  const total = subtotal + taxaEntrega;
 
   const modalPodeAdicionar = useMemo(() => {
     if (!itemModal || itemModal.loading) return false;
@@ -368,6 +375,9 @@ export default function Balcao() {
     const pedido = {
       itens: cartItems,
       total,
+      subtotal,
+      taxa_entrega: taxaEntrega,
+      local_entrega: tipoEntrega === 'delivery' ? TAXAS_ENTREGA[localEntrega]?.nome || null : null,
       tipo_entrega: tipoEntrega,
       mesa: null,
       nome_cliente: nomeCliente.trim() || null,
@@ -414,6 +424,21 @@ export default function Balcao() {
                 Delivery
               </button>
             </div>
+
+            {tipoEntrega === 'delivery' ? (
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+                {Object.entries(TAXAS_ENTREGA).map(([id, taxa]) => (
+                  <button
+                    type="button"
+                    className={`rounded-lg py-2.5 text-sm font-bold transition ${localEntrega === id ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setLocalEntrega(id)}
+                    key={id}
+                  >
+                    {taxa.nome} · {moeda(taxa.valor)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <div className="mt-3">
               <input
@@ -625,6 +650,12 @@ export default function Balcao() {
 
         {quantidade ? (
           <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[480px] border-t border-purple-500/25 bg-black/95 p-4 shadow-2xl shadow-purple-950/30 backdrop-blur">
+            {taxaEntrega ? (
+              <div className="mb-3 flex items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm font-bold">
+                <span className="text-emerald-100">Entrega: {TAXAS_ENTREGA[localEntrega]?.nome}</span>
+                <span className="text-emerald-200">+ {moeda(taxaEntrega)}</span>
+              </div>
+            ) : null}
             <button className="primary-button w-full justify-between rounded-xl px-5" type="button" onClick={confirmarPedido} disabled={saving}>
               <span>{saving ? 'Enviando...' : `Confirmar ${formatarQuantidadeTotal(quantidade)} item${quantidade === 1 ? '' : 's'}`}</span>
               <span>{moeda(total)}</span>
