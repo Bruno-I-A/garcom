@@ -355,15 +355,8 @@ export function adicionarItensPedido(pedidoId, itens) {
     method: 'PATCH',
     body: JSON.stringify({
       itens,
-      itens_novos: itens,
-      itens_impressao: itens,
-      novos_itens: itens,
-      apenas_itens: itens,
-      imprimir: true,
       impressao_parcial: true,
-      apenas_novos: true,
-      imprimir_apenas_itens_novos: true,
-      imprimir_apenas_itens: true
+      imprimir_apenas_itens_novos: true
     })
   });
 }
@@ -398,15 +391,8 @@ export function imprimirItensPedido(pedidoId, itens) {
     method: 'POST',
     body: JSON.stringify({
       itens,
-      itens_novos: itens,
-      itens_impressao: itens,
-      novos_itens: itens,
-      apenas_itens: itens,
-      imprimir: true,
       impressao_parcial: true,
-      apenas_novos: true,
-      imprimir_apenas_itens_novos: true,
-      imprimir_apenas_itens: true
+      imprimir_apenas_itens_novos: true
     })
   });
 }
