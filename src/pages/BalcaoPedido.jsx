@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import { asArray, atualizarPedidoStatus, getPedidosAbertos, reimprimirPedido, removerItemPedido } from '../services/api.js';
@@ -34,6 +34,7 @@ export default function BalcaoPedido() {
   const [removendo, setRemovendo] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const printSubmitRef = useRef(false);
 
   useEffect(() => {
     async function loadPedido() {
@@ -87,6 +88,7 @@ export default function BalcaoPedido() {
   }
 
   async function imprimirPedido() {
+    if (printing || printSubmitRef.current) return;
     const pedidoId = getPedidoId(pedido);
     if (!pedidoId) {
       setError('Erro ao enviar para impressão');
@@ -94,6 +96,7 @@ export default function BalcaoPedido() {
       return;
     }
 
+    printSubmitRef.current = true;
     setPrinting(true);
     setError('');
     setSuccess('');
@@ -104,6 +107,9 @@ export default function BalcaoPedido() {
       setError('Erro ao enviar para impressão');
     } finally {
       setPrinting(false);
+      window.setTimeout(() => {
+        printSubmitRef.current = false;
+      }, 1500);
     }
   }
 
