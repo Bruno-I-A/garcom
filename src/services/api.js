@@ -246,6 +246,44 @@ export function getPizzaSabores() {
   return request('/pizza/sabores');
 }
 
+function precoAdicionaisItem(item) {
+  return asArray(item?.adicionais).reduce(
+    (acc, grupo) => acc + asArray(grupo?.itens_selecionados).reduce((sum, ad) => sum + Number(ad?.preco || 0), 0),
+    0
+  );
+}
+
+// O backend valida itens com `id` contra o cardapio (FK). A pizza nao e um
+// produto real, entao enviamos o item sem `id`: sabores/adicionais viram texto
+// em `observacao` (que a comanda imprime) e o preco ja inclui os adicionais.
+export function prepararItensPedido(itens) {
+  return asArray(itens).map((item) => {
+    if (!String(item?.id || '').startsWith('pizza-')) return item;
+
+    const adicionais = asArray(item.adicionais);
+    const grupoSabores = adicionais.find((grupo) => grupo?.grupo_id === 'sabores');
+    const sabores = asArray(grupoSabores?.itens_selecionados);
+    const outros = adicionais
+      .filter((grupo) => grupo?.grupo_id !== 'sabores')
+      .flatMap((grupo) => asArray(grupo.itens_selecionados));
+
+    const partes = [];
+    if (sabores.length) partes.push(`Sabores: ${sabores.map((s) => s.nome).join(', ')}`);
+    if (outros.length) partes.push(outros.map((a) => a.nome).join(', '));
+    if (item.observacao) partes.push(item.observacao);
+
+    return {
+      tipo: 'pizza',
+      tamanho_id: Number(String(item.id).replace('pizza-', '')) || null,
+      nome: item.nome,
+      preco: Number(item.preco || 0) + precoAdicionaisItem(item),
+      quantidade: item.quantidade,
+      observacao: partes.join(' | '),
+      sabores: sabores.map((s) => ({ id: s.id, nome: s.nome }))
+    };
+  });
+}
+
 export function criarPedido(pedido) {
   if (isDemoSession()) {
     return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });

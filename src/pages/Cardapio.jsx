@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import PizzaBuilder from '../components/PizzaBuilder.jsx';
-import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
+import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, getPedidosAbertos, prepararItensPedido } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
@@ -453,8 +453,9 @@ export default function Cardapio() {
 
     const garcom = getGarcom() || {};
     const garcomNome = getGarcomNome(garcom);
+    const itensPedido = prepararItensPedido(cartItems);
     const pedido = {
-      itens: cartItems,
+      itens: itensPedido,
       total,
       tipo_entrega: 'mesa',
       mesa: String(numero),
@@ -475,7 +476,7 @@ export default function Cardapio() {
       const pedidoExistenteId = pedidoId(pedidoExistente);
 
       if (pedidoExistenteId) {
-        await adicionarItensPedido(pedidoExistenteId, cartItems);
+        await adicionarItensPedido(pedidoExistenteId, itensPedido);
       } else {
         await criarPedido(pedido);
       }

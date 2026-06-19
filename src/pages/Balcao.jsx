@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import PizzaBuilder from '../components/PizzaBuilder.jsx';
-import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria } from '../services/api.js';
+import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, prepararItensPedido } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
@@ -426,7 +426,7 @@ export default function Balcao() {
     const endereco = tipoEntrega === 'delivery' ? enderecoEntrega.trim() : null;
     const local = tipoEntrega === 'delivery' ? TAXAS_ENTREGA[localEntrega]?.nome || null : null;
     const pedido = {
-      itens: cartItems,
+      itens: prepararItensPedido(cartItems),
       total,
       subtotal,
       taxa_entrega: taxaEntrega,
