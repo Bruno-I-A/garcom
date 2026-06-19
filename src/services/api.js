@@ -192,6 +192,10 @@ function productCategoryId(produto) {
   return categoria || produto?.categoria_nome || 'Sem categoria';
 }
 
+function hasAdminCategory(produto) {
+  return produto?.categoria_id != null || produto?.categoriaId != null;
+}
+
 function isAvailableProduct(produto) {
   return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
 }
@@ -210,7 +214,14 @@ function shouldReplaceProduct(current, next) {
 }
 
 function normalizeCardapio(data) {
-  const produtos = asArray(data).filter(isAvailableProduct);
+  const availableProducts = asArray(data).filter(isAvailableProduct);
+  const categoriesWithAdminProducts = new Set(
+    availableProducts.filter(hasAdminCategory).map((produto) => String(productCategoryId(produto)))
+  );
+  const produtos = availableProducts.filter((produto) => {
+    if (hasAdminCategory(produto)) return true;
+    return !categoriesWithAdminProducts.has(String(productCategoryId(produto)));
+  });
   const byCategoryAndName = new Map();
 
   produtos.forEach((produto) => {
@@ -220,7 +231,7 @@ function normalizeCardapio(data) {
     const normalized = {
       ...produto,
       categoria_id: categoriaId,
-      __hasAdminCategory: produto?.categoria_id != null || produto?.categoriaId != null
+      __hasAdminCategory: hasAdminCategory(produto)
     };
     const current = byCategoryAndName.get(key);
 
