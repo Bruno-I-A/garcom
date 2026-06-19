@@ -176,7 +176,67 @@ export function getCategorias() {
   return request('/categorias');
 }
 
-export function getCardapio() {
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function productCategoryId(produto) {
+  const categoria = produto?.categoria;
+  if (produto?.categoria_id != null) return produto.categoria_id;
+  if (produto?.categoriaId != null) return produto.categoriaId;
+  if (categoria && typeof categoria === 'object') return categoria.id || categoria._id || categoria.categoria_id || categoria.nome;
+  return categoria || produto?.categoria_nome || 'Sem categoria';
+}
+
+function isAvailableProduct(produto) {
+  return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
+}
+
+function productUpdatedAt(produto) {
+  const date = new Date(produto?.atualizado_em || produto?.updated_at || produto?.criado_em || produto?.created_at || 0);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function shouldReplaceProduct(current, next) {
+  const currentHasAdminCategory = Boolean(current?.__hasAdminCategory);
+  const nextHasAdminCategory = Boolean(next?.__hasAdminCategory);
+
+  if (nextHasAdminCategory !== currentHasAdminCategory) return nextHasAdminCategory;
+  return productUpdatedAt(next) >= productUpdatedAt(current);
+}
+
+function normalizeCardapio(data) {
+  const produtos = asArray(data).filter(isAvailableProduct);
+  const byCategoryAndName = new Map();
+
+  produtos.forEach((produto) => {
+    const categoriaId = productCategoryId(produto);
+    const nome = produto?.nome || produto?.name || produto?.titulo || produto?.id;
+    const key = `${String(categoriaId)}:${normalizeText(nome)}`;
+    const normalized = {
+      ...produto,
+      categoria_id: categoriaId,
+      __hasAdminCategory: produto?.categoria_id != null || produto?.categoriaId != null
+    };
+    const current = byCategoryAndName.get(key);
+
+    if (!current || shouldReplaceProduct(current, normalized)) {
+      byCategoryAndName.set(key, normalized);
+    }
+  });
+
+  return Array.from(byCategoryAndName.values()).map((produto) => {
+    const clean = { ...produto };
+    delete clean.__hasAdminCategory;
+    return clean;
+  });
+}
+
+export async function getCardapio() {
   if (isDemoSession()) {
     return Promise.resolve([
       { id: 'burger', nome: 'Hambúrguer da casa', preco: 32.9, categoria_id: 'lanches' },
@@ -187,7 +247,7 @@ export function getCardapio() {
     ]);
   }
 
-  return request('/cardapio');
+  return normalizeCardapio(await request('/cardapio'));
 }
 
 export function getGruposAdicionaisCategoria(categoriaId) {
