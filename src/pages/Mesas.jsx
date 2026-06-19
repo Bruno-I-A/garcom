@@ -51,6 +51,10 @@ export default function Mesas() {
     return new Set(pedidos.filter(pedidoAberto).map(mesaDoPedido).filter(Boolean));
   }, [pedidos]);
 
+  const balcaoAbertos = useMemo(() => {
+    return pedidos.filter((pedido) => pedidoAberto(pedido) && !mesaDoPedido(pedido)).length;
+  }, [pedidos]);
+
   return (
     <main className="app-shell">
       <div className="mobile-page">
@@ -61,12 +65,23 @@ export default function Mesas() {
 
         <section className="pb-4">
           <button
-            className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-950/25 px-5 py-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98]"
+            className="mb-3 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-950/25 px-5 py-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98]"
             type="button"
             onClick={() => navigate('/balcao')}
           >
             <span className="text-xl font-black text-emerald-200">Pedido Balcão</span>
             <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-300">Sem mesa →</span>
+          </button>
+
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-purple-400/40 bg-purple-950/25 px-5 py-4 text-left shadow-lg shadow-black/20 transition hover:-translate-y-0.5 active:scale-[0.98]"
+            type="button"
+            onClick={() => navigate('/balcao/pedidos')}
+          >
+            <span className="text-xl font-black text-purple-200">Pedidos Balcão</span>
+            <span className="rounded-full border border-purple-400/30 bg-purple-500/15 px-3 py-1 text-sm font-bold text-purple-300">
+              {balcaoAbertos} aberto{balcaoAbertos === 1 ? '' : 's'} →
+            </span>
           </button>
         </section>
 

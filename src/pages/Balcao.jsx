@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import PizzaBuilder from '../components/PizzaBuilder.jsx';
-import { asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, prepararItensPedido } from '../services/api.js';
+import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, prepararItensPedido } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
 const BUFFET_KG_PRECO = 64;
@@ -127,6 +127,8 @@ function categoriaVisual(nome, index) {
 
 export default function Balcao() {
   const navigate = useNavigate();
+  const { id: pedidoExistenteId } = useParams();
+  const modoAdicionar = Boolean(pedidoExistenteId);
   const [tipoEntrega, setTipoEntrega] = useState('balcao');
   const [localEntrega, setLocalEntrega] = useState('getulio');
   const [nomeCliente, setNomeCliente] = useState('');
@@ -415,6 +417,21 @@ export default function Balcao() {
       setError('Adicione pelo menos um item ao pedido.');
       return;
     }
+
+    if (modoAdicionar) {
+      setSaving(true);
+      setError('');
+      try {
+        await adicionarItensPedido(pedidoExistenteId, prepararItensPedido(cartItems));
+        navigate(`/balcao/pedido/${pedidoExistenteId}`, { replace: true });
+      } catch (err) {
+        setError(err.message || 'Não foi possível adicionar os itens.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (tipoEntrega === 'delivery' && !enderecoEntrega.trim()) {
       setError('Informe o endereço de entrega.');
       return;
@@ -468,62 +485,66 @@ export default function Balcao() {
       <div className="mobile-page">
         {!categoriaAtual ? (
           <header className="sticky top-0 z-20 -mx-4 mb-5 border-b border-purple-400/15 bg-black/95 px-4 py-4 shadow-lg shadow-purple-950/20 backdrop-blur">
-            <Header title="Pedido no Balcão" showBack />
+            <Header title={modoAdicionar ? `Adicionar ao Pedido #${pedidoExistenteId}` : 'Pedido no Balcão'} showBack />
 
-            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
-              <button
-                type="button"
-                className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'balcao' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-                onClick={() => setTipoEntrega('balcao')}
-              >
-                Retirada no balcão
-              </button>
-              <button
-                type="button"
-                className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'delivery' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-                onClick={() => setTipoEntrega('delivery')}
-              >
-                Delivery
-              </button>
-            </div>
-
-            {tipoEntrega === 'delivery' ? (
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
-                {Object.entries(TAXAS_ENTREGA).map(([id, taxa]) => (
+            {!modoAdicionar ? (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
                   <button
                     type="button"
-                    className={`rounded-lg py-2.5 text-sm font-bold transition ${localEntrega === id ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-                    onClick={() => setLocalEntrega(id)}
-                    key={id}
+                    className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'balcao' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setTipoEntrega('balcao')}
                   >
-                    {taxa.nome} · {moeda(taxa.valor)}
+                    Retirada no balcão
                   </button>
-                ))}
-              </div>
-            ) : null}
+                  <button
+                    type="button"
+                    className={`rounded-lg py-2.5 text-sm font-bold transition ${tipoEntrega === 'delivery' ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setTipoEntrega('delivery')}
+                  >
+                    Delivery
+                  </button>
+                </div>
 
-            <div className="mt-3">
-              <input
-                className="field w-full text-base"
-                type="text"
-                placeholder="Nome do cliente (opcional)"
-                value={nomeCliente}
-                onChange={(e) => setNomeCliente(e.target.value)}
-                aria-label="Nome do cliente"
-              />
-            </div>
+                {tipoEntrega === 'delivery' ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+                    {Object.entries(TAXAS_ENTREGA).map(([id, taxa]) => (
+                      <button
+                        type="button"
+                        className={`rounded-lg py-2.5 text-sm font-bold transition ${localEntrega === id ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        onClick={() => setLocalEntrega(id)}
+                        key={id}
+                      >
+                        {taxa.nome} · {moeda(taxa.valor)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
 
-            {tipoEntrega === 'delivery' ? (
-              <div className="mt-2">
-                <input
-                  className="field w-full text-base"
-                  type="text"
-                  placeholder="Endereço de entrega"
-                  value={enderecoEntrega}
-                  onChange={(e) => setEnderecoEntrega(e.target.value)}
-                  aria-label="Endereço de entrega"
-                />
-              </div>
+                <div className="mt-3">
+                  <input
+                    className="field w-full text-base"
+                    type="text"
+                    placeholder="Nome do cliente (opcional)"
+                    value={nomeCliente}
+                    onChange={(e) => setNomeCliente(e.target.value)}
+                    aria-label="Nome do cliente"
+                  />
+                </div>
+
+                {tipoEntrega === 'delivery' ? (
+                  <div className="mt-2">
+                    <input
+                      className="field w-full text-base"
+                      type="text"
+                      placeholder="Endereço de entrega"
+                      value={enderecoEntrega}
+                      onChange={(e) => setEnderecoEntrega(e.target.value)}
+                      aria-label="Endereço de entrega"
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : null}
 
             <div className="mt-2">
@@ -751,7 +772,7 @@ export default function Balcao() {
               </div>
             ) : null}
             <button className="primary-button w-full justify-between rounded-xl px-5" type="button" onClick={confirmarPedido} disabled={saving}>
-              <span>{saving ? 'Enviando...' : `Confirmar ${formatarQuantidadeTotal(quantidade)} item${quantidade === 1 ? '' : 's'}`}</span>
+              <span>{saving ? 'Enviando...' : `${modoAdicionar ? 'Adicionar' : 'Confirmar'} ${formatarQuantidadeTotal(quantidade)} item${quantidade === 1 ? '' : 's'}`}</span>
               <span>{moeda(total)}</span>
             </button>
           </div>
