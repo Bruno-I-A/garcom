@@ -192,10 +192,6 @@ function productCategoryId(produto) {
   return categoria || produto?.categoria_nome || 'Sem categoria';
 }
 
-function hasAdminCategory(produto) {
-  return produto?.categoria_id != null || produto?.categoriaId != null;
-}
-
 function isAvailableProduct(produto) {
   return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
 }
@@ -206,33 +202,18 @@ function productUpdatedAt(produto) {
 }
 
 function shouldReplaceProduct(current, next) {
-  const currentHasAdminCategory = Boolean(current?.__hasAdminCategory);
-  const nextHasAdminCategory = Boolean(next?.__hasAdminCategory);
-
-  if (nextHasAdminCategory !== currentHasAdminCategory) return nextHasAdminCategory;
   return productUpdatedAt(next) >= productUpdatedAt(current);
 }
 
 function normalizeCardapio(data) {
-  const availableProducts = asArray(data).filter(isAvailableProduct);
-  const categoriesWithAdminProducts = new Set(
-    availableProducts.filter(hasAdminCategory).map((produto) => String(productCategoryId(produto)))
-  );
-  const produtos = availableProducts.filter((produto) => {
-    if (hasAdminCategory(produto)) return true;
-    return !categoriesWithAdminProducts.has(String(productCategoryId(produto)));
-  });
+  const produtos = asArray(data).filter(isAvailableProduct);
   const byCategoryAndName = new Map();
 
   produtos.forEach((produto) => {
     const categoriaId = productCategoryId(produto);
     const nome = produto?.nome || produto?.name || produto?.titulo || produto?.id;
     const key = `${String(categoriaId)}:${normalizeText(nome)}`;
-    const normalized = {
-      ...produto,
-      categoria_id: categoriaId,
-      __hasAdminCategory: hasAdminCategory(produto)
-    };
+    const normalized = { ...produto, categoria_id: categoriaId };
     const current = byCategoryAndName.get(key);
 
     if (!current || shouldReplaceProduct(current, normalized)) {
@@ -240,11 +221,7 @@ function normalizeCardapio(data) {
     }
   });
 
-  return Array.from(byCategoryAndName.values()).map((produto) => {
-    const clean = { ...produto };
-    delete clean.__hasAdminCategory;
-    return clean;
-  });
+  return Array.from(byCategoryAndName.values());
 }
 
 export async function getCardapio() {
