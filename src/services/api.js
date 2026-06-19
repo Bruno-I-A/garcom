@@ -222,6 +222,30 @@ export function getGruposAdicionaisCategoria(categoriaId) {
   return request(`/grupos-adicionais/categoria/${categoriaId}`);
 }
 
+export function getPizzaTamanhos() {
+  if (isDemoSession()) {
+    return Promise.resolve([
+      { id: 1, nome: 'Pequena', pedacos: 12, preco: '60.00', ativo: true },
+      { id: 2, nome: 'Grande', pedacos: 16, preco: '75.00', ativo: true }
+    ]);
+  }
+
+  return request('/pizza/tamanhos');
+}
+
+export function getPizzaSabores() {
+  if (isDemoSession()) {
+    return Promise.resolve([
+      { id: 1, nome: 'Calabresa', categoria: 'salgada', descricao: 'Molho, mussarela, calabresa e orégano.', ativo: true, ordem: 1 },
+      { id: 2, nome: 'Mussarela', categoria: 'salgada', descricao: 'Molho, mussarela e orégano.', ativo: true, ordem: 2 },
+      { id: 3, nome: 'Portuguesa', categoria: 'salgada', descricao: 'Molho, mussarela, presunto, tomate, cebola, ovo e pimentão.', ativo: true, ordem: 3 },
+      { id: 4, nome: 'Sonho de Valsa', categoria: 'doce', descricao: 'Chocolate e Sonho de Valsa.', ativo: true, ordem: 4 }
+    ]);
+  }
+
+  return request('/pizza/sabores');
+}
+
 export function criarPedido(pedido) {
   if (isDemoSession()) {
     return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });

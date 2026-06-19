@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
+import PizzaBuilder from '../components/PizzaBuilder.jsx';
 import { adicionarItensPedido, asArray, criarPedido, getCardapio, getCategorias, getGarcom, getGarcomNome, getGruposAdicionaisCategoria, getPedidosAbertos } from '../services/api.js';
 
 const BUFFET_LIVRE_PRECO = 30;
@@ -33,6 +34,10 @@ function categoriaNome(categoria) {
 
 function produtoCategoria(produto) {
   return produto?.categoria_id || produto?.categoriaId || produto?.categoria || produto?.categoria_nome || 'Sem categoria';
+}
+
+function isCategoriaPizza(categoria) {
+  return normalizarTexto(categoria?.nome || categoria?.name).includes('pizza');
 }
 
 function grupoId(grupo) {
@@ -257,11 +262,12 @@ export default function Cardapio() {
     return Number.isInteger(value) ? value : value.toFixed(3);
   }
 
-  function buildCartKey(id, observacao, adicionais) {
+  function buildCartKey(id, observacao, adicionais, unico = false) {
     const adicionaisKey = asArray(adicionais)
       .map((grupo) => `${grupo.grupo_id}:${asArray(grupo.itens_selecionados).map((item) => item.id).join(',')}`)
       .join('|');
-    return `${id}|${observacao.trim()}|${adicionaisKey}`;
+    const base = `${id}|${observacao.trim()}|${adicionaisKey}`;
+    return unico ? `${base}|${Date.now()}-${Math.random().toString(36).slice(2)}` : base;
   }
 
   function quantidadeProduto(produto) {
@@ -269,9 +275,31 @@ export default function Cardapio() {
     return cartItems.filter((item) => String(item.id) === id).reduce((acc, item) => acc + Number(item.quantidade || 0), 0);
   }
 
-  function addProduto(produto, quantidade = 1, preco = Number(produto?.preco || produto?.price || 0), observacao = '', adicionais = []) {
+  function entradasProduto(produto) {
+    const id = String(produtoId(produto));
+    return Object.entries(cart)
+      .filter(([, item]) => String(item.id) === id)
+      .map(([key, item]) => ({ key, item }));
+  }
+
+  function entradasPizza() {
+    return Object.entries(cart)
+      .filter(([, item]) => String(item.id).startsWith('pizza-'))
+      .map(([key, item]) => ({ key, item }));
+  }
+
+  function removerEntradaCarrinho(key) {
+    setCart((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function addProduto(produto, quantidade = 1, preco = Number(produto?.preco || produto?.price || 0), observacao = '', adicionais = [], unico = false) {
     const id = produtoId(produto);
-    const cartKey = buildCartKey(String(id), observacao, adicionais);
+    const cartKey = buildCartKey(String(id), observacao, adicionais, unico);
     setCart((current) => ({
       ...current,
       [cartKey]: {
@@ -307,7 +335,7 @@ export default function Cardapio() {
     });
   }
 
-  async function abrirModalProduto(produto, categoria, quantidadeInicial = 1, preco = Number(produto?.preco || produto?.price || 0)) {
+  async function abrirModalProduto(produto, categoria, quantidadeInicial = 1, preco = Number(produto?.preco || produto?.price || 0), unico = false) {
     const categoriaDoProduto = produtoCategoria(produto);
     const categoriaApiId = categoria?.id || categoriaDoProduto;
     setError('');
@@ -320,7 +348,8 @@ export default function Cardapio() {
       grupos: [],
       selecionados: {},
       loading: true,
-      error: ''
+      error: '',
+      unico
     });
 
     try {
@@ -397,7 +426,7 @@ export default function Cardapio() {
 
   function confirmarModalProduto() {
     if (!itemModal || !modalPodeAdicionar) return;
-    addProduto(itemModal.produto, itemModal.quantidade, itemModal.preco, itemModal.observacao, montarAdicionaisSelecionados());
+    addProduto(itemModal.produto, itemModal.quantidade, itemModal.preco, itemModal.observacao, montarAdicionaisSelecionados(), itemModal.unico);
     setItemModal(null);
   }
 
@@ -413,7 +442,7 @@ export default function Cardapio() {
     }
 
     setError('');
-    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, precoBuffet);
+    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, precoBuffet, true);
   }
 
   async function confirmarPedido() {
@@ -556,12 +585,18 @@ export default function Cardapio() {
                         </div>
                       )}
                     </div>
-                    {buffet && itemQuantidade ? (
-                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
-                        <span className="text-sm font-bold text-purple-100">No carrinho: {formatarQuantidadeTotal(itemQuantidade)}</span>
-                        <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removeProduto(produto, buffetTipo === 'kg' ? Number(buffetValue || 0) : 1)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
-                          -
-                        </button>
+                    {buffet && entradasProduto(produto).length ? (
+                      <div className="mt-3 space-y-2">
+                        {entradasProduto(produto).map(({ key, item }) => (
+                          <div key={key} className="flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
+                            <span className="text-sm font-bold text-purple-100">
+                              No carrinho: {formatarQuantidadeTotal(item.quantidade)}{buffetTipo === 'kg' ? ' kg' : ''}
+                            </span>
+                            <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removerEntradaCarrinho(key)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                              -
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     ) : null}
                   </article>
@@ -590,7 +625,14 @@ export default function Cardapio() {
           </section>
         ) : (
           <section className={quantidade ? 'space-y-3 pb-32' : 'space-y-3 pb-6'}>
-            {categoriaAtual.items.length ? (
+            {isCategoriaPizza(categoriaAtual) ? (
+              <PizzaBuilder
+                categoriaId={categoriaAtual.id}
+                pizzasNoCarrinho={entradasPizza()}
+                onAdicionar={(produto, preco, observacao, adicionais) => addProduto(produto, 1, preco, observacao, adicionais, true)}
+                onRemover={removerEntradaCarrinho}
+              />
+            ) : categoriaAtual.items.length ? (
               categoriaAtual.items.map((produto) => {
                 const id = produtoId(produto);
                 const itemQuantidade = quantidadeProduto(produto);
@@ -645,12 +687,18 @@ export default function Cardapio() {
                         </div>
                       )}
                     </div>
-                    {buffet && itemQuantidade ? (
-                      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
-                        <span className="text-sm font-bold text-purple-100">No carrinho: {formatarQuantidadeTotal(itemQuantidade)}</span>
-                        <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removeProduto(produto, buffetTipo === 'kg' ? Number(buffetValue || 0) : 1)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
-                          -
-                        </button>
+                    {buffet && entradasProduto(produto).length ? (
+                      <div className="mt-3 space-y-2">
+                        {entradasProduto(produto).map(({ key, item }) => (
+                          <div key={key} className="flex items-center justify-between gap-3 rounded-lg bg-purple-500/10 px-3 py-2">
+                            <span className="text-sm font-bold text-purple-100">
+                              No carrinho: {formatarQuantidadeTotal(item.quantidade)}{buffetTipo === 'kg' ? ' kg' : ''}
+                            </span>
+                            <button className="secondary-button h-10 min-h-10 w-10 px-0 text-2xl" type="button" onClick={() => removerEntradaCarrinho(key)} aria-label={`Remover ${produto?.nome || 'produto'}`}>
+                              -
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     ) : null}
                   </article>
