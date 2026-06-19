@@ -36,21 +36,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.origin === 'https://agentes-agente-restaurante.feit1k.easypanel.host',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'shiftsys-api',
-              networkTimeoutSeconds: 8,
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 60 * 10
-              }
-            }
-          }
-        ]
+        navigateFallback: '/index.html'
       }
     })
   ]

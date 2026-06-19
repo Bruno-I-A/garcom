@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import PizzaBuilder from '../components/PizzaBuilder.jsx';
@@ -163,6 +163,8 @@ export default function Cardapio() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const modalSubmitRef = useRef(false);
+  const pedidoSubmitRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -425,9 +427,14 @@ export default function Cardapio() {
   }
 
   function confirmarModalProduto() {
+    if (modalSubmitRef.current) return;
     if (!itemModal || !modalPodeAdicionar) return;
+    modalSubmitRef.current = true;
     addProduto(itemModal.produto, itemModal.quantidade, itemModal.preco, itemModal.observacao, montarAdicionaisSelecionados(), itemModal.unico);
     setItemModal(null);
+    window.setTimeout(() => {
+      modalSubmitRef.current = false;
+    }, 350);
   }
 
   function abrirModalBuffetProduto(produto) {
@@ -446,11 +453,13 @@ export default function Cardapio() {
   }
 
   async function confirmarPedido() {
+    if (saving || pedidoSubmitRef.current) return;
     if (!cartItems.length) {
       setError('Adicione pelo menos um item ao pedido.');
       return;
     }
 
+    pedidoSubmitRef.current = true;
     const garcom = getGarcom() || {};
     const garcomNome = getGarcomNome(garcom);
     const itensPedido = prepararItensPedido(cartItems);
@@ -484,6 +493,7 @@ export default function Cardapio() {
       navigate(`/mesa/${numero}`, { replace: true });
     } catch (err) {
       setError(err.message || 'Não foi possível confirmar o pedido.');
+      pedidoSubmitRef.current = false;
     } finally {
       setSaving(false);
     }

@@ -64,6 +64,8 @@ function normalizeLoginResponse(data) {
 
 async function request(path, options = {}) {
   const token = getToken();
+  const method = String(options.method || 'GET').toUpperCase();
+  const requestPath = method === 'GET' ? `${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}` : path;
   const headers = {
     Accept: 'application/json',
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
@@ -72,8 +74,9 @@ async function request(path, options = {}) {
   };
 
   try {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${API_URL}${requestPath}`, {
       ...options,
+      cache: method === 'GET' ? 'no-store' : 'default',
       headers
     });
 
