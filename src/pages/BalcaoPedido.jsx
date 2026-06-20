@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import { asArray, atualizarPedidoStatus, getPedidosAbertos, reimprimirPedido, removerItemPedido } from '../services/api.js';
+import { asArray, atualizarPedidoStatus, getPedidosAbertos, imprimirItensPedido, itemNovoParaImpressao, itensNovosParaImpressao, marcarItensComoImpressos, removerItemPedido } from '../services/api.js';
 
 function getPedidoId(pedido) {
   return pedido?.id || pedido?._id || pedido?.pedido_id;
@@ -57,6 +57,8 @@ export default function BalcaoPedido() {
   }, [id]);
 
   const itens = useMemo(() => itensDoPedido(pedido), [pedido]);
+  const pedidoIdAtual = getPedidoId(pedido);
+  const itensNovos = useMemo(() => itensNovosParaImpressao(pedidoIdAtual, itens), [pedidoIdAtual, itens]);
   const total = useMemo(() => {
     return Number(pedido?.total ?? itens.reduce((acc, item) => acc + Number(item?.preco || 0) * Number(item?.quantidade || 0), 0));
   }, [itens, pedido]);
@@ -96,12 +98,30 @@ export default function BalcaoPedido() {
       return;
     }
 
+    const novos = itensNovosParaImpressao(pedidoId, itens);
+    if (!novos.length) {
+      setError('');
+      setSuccess('Nenhum item novo para imprimir.');
+      return;
+    }
+
     printSubmitRef.current = true;
     setPrinting(true);
     setError('');
     setSuccess('');
     try {
-      await reimprimirPedido(pedidoId);
+      await imprimirItensPedido(pedidoId, novos);
+      const impressos = marcarItensComoImpressos(pedidoId, novos);
+      setPedido((atual) => {
+        if (!atual) return atual;
+        const itensImpressos = new Set(novos);
+        const idsImpressos = new Set(impressos.map((item) => item?.id || item?._id || item?.item_id || item?.client_uid).filter(Boolean));
+        const itensAtualizados = itensDoPedido(atual).map((item) => {
+          const itemId = item?.id || item?._id || item?.item_id || item?.client_uid;
+          return itensImpressos.has(item) || idsImpressos.has(itemId) ? { ...item, status_impressao: 'impresso', impressao_status: 'impresso', novo: false, impresso: true } : item;
+        });
+        return { ...atual, itens: itensAtualizados };
+      });
       setSuccess('Pedido enviado para impressão');
     } catch {
       setError('Erro ao enviar para impressão');
@@ -182,6 +202,11 @@ export default function BalcaoPedido() {
                           <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
                           <p className="mt-1 text-gray-400">Qtd. {item?.quantidade || 0}</p>
                           {item?.observacao ? <p className="mt-1 text-sm text-purple-200/80">{item.observacao}</p> : null}
+                          {itemNovoParaImpressao(pedidoIdAtual, item) ? (
+                            <span className="mt-2 inline-flex rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-emerald-200">
+                              Novo
+                            </span>
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-3">
                           <strong className="whitespace-nowrap text-lg text-purple-300">
@@ -221,7 +246,7 @@ export default function BalcaoPedido() {
                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                     <path d="M6 14h12v8H6z" />
                   </svg>
-                  {printing ? 'Enviando...' : 'Imprimir Pedido'}
+                  {printing ? 'Enviando...' : `Imprimir Novos (${itensNovos.length})`}
                 </button>
                 <button className="secondary-button" type="button" onClick={() => updateStatus('entregue')} disabled={saving}>
                   {saving ? 'Atualizando...' : 'Fechar Pedido'}

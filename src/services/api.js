@@ -1,6 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'https://agentes-agente-restaurante.feit1k.easypanel.host';
 const TOKEN_KEY = 'shiftsys_garcom_token';
 const GARCOM_KEY = 'shiftsys_garcom';
+const PRINTED_ITEMS_KEY = 'shiftsys_garcom_itens_impressos';
 const DEMO_TOKEN = 'demo-token';
 
 function friendlyError(error) {
@@ -327,6 +328,79 @@ function isBebidaItem(item) {
   return String(itemCategoriaId(item)) === '70' || normalizeText(item?.categoria_nome || item?.categoria?.nome).includes('bebida');
 }
 
+function itemPrintKey(item) {
+  return String(
+    item?.client_uid ||
+      item?.uid_cliente ||
+      item?.item_uid ||
+      item?.id ||
+      item?._id ||
+      item?.item_id ||
+      `${item?.nome || item?.name || 'item'}|${item?.preco || 0}|${item?.quantidade || 0}|${item?.observacao || ''}`
+  );
+}
+
+function getPrintedItems() {
+  try {
+    return JSON.parse(localStorage.getItem(PRINTED_ITEMS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function setPrintedItems(value) {
+  localStorage.setItem(PRINTED_ITEMS_KEY, JSON.stringify(value));
+}
+
+function withNewPrintStatus(item, imprimir) {
+  return {
+    ...item,
+    imprimir,
+    imprimir_cozinha: imprimir,
+    client_uid: item?.client_uid || item?.uid_cliente || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    status_impressao: 'novo',
+    impressao_status: 'novo',
+    novo: true,
+    impresso: false
+  };
+}
+
+export function itemJaImpresso(pedidoId, item) {
+  const status = normalizeText(item?.status_impressao || item?.impressao_status || item?.status_cozinha || item?.status);
+  const explicitamenteImpresso = item?.impresso === true || item?.novo === false || ['impresso', 'printed', 'enviado'].includes(status);
+  if (explicitamenteImpresso) return true;
+
+  const printedItems = getPrintedItems();
+  const pedidoKey = String(pedidoId || '');
+  return asArray(printedItems[pedidoKey]).includes(itemPrintKey(item));
+}
+
+export function itemNovoParaImpressao(pedidoId, item) {
+  return item?.imprimir !== false && item?.imprimir_cozinha !== false && !itemJaImpresso(pedidoId, item);
+}
+
+export function itensNovosParaImpressao(pedidoId, itens) {
+  return asArray(itens).filter((item) => itemNovoParaImpressao(pedidoId, item));
+}
+
+export function marcarItensComoImpressos(pedidoId, itens) {
+  const pedidoKey = String(pedidoId || '');
+  const printedItems = getPrintedItems();
+  const current = new Set(asArray(printedItems[pedidoKey]));
+
+  asArray(itens).forEach((item) => current.add(itemPrintKey(item)));
+  printedItems[pedidoKey] = Array.from(current);
+  setPrintedItems(printedItems);
+
+  return asArray(itens).map((item) => ({
+    ...item,
+    status_impressao: 'impresso',
+    impressao_status: 'impresso',
+    novo: false,
+    impresso: true
+  }));
+}
+
 // O backend valida itens com `id` contra o cardapio (FK). A pizza nao e um
 // produto real, entao enviamos o item sem `id`: sabores/adicionais viram texto
 // em `observacao` (que a comanda imprime) e o preco ja inclui os adicionais.
@@ -335,7 +409,7 @@ export function prepararItensPedido(itens) {
     const imprimir = !isBebidaItem(item);
 
     if (!String(item?.id || '').startsWith('pizza-')) {
-      return { ...item, imprimir, imprimir_cozinha: imprimir };
+      return withNewPrintStatus(item, imprimir);
     }
 
     const adicionais = asArray(item.adicionais);
@@ -350,22 +424,16 @@ export function prepararItensPedido(itens) {
     if (outros.length) partes.push(outros.map((a) => a.nome).join(', '));
     if (item.observacao) partes.push(item.observacao);
 
-    return {
+    return withNewPrintStatus({
       tipo: 'pizza',
       tamanho_id: Number(String(item.id).replace('pizza-', '')) || null,
       nome: item.nome,
       preco: Number(item.preco || 0) + precoAdicionaisItem(item),
       quantidade: item.quantidade,
       observacao: partes.join(' | '),
-      imprimir,
-      imprimir_cozinha: imprimir,
       sabores: sabores.map((s) => ({ id: s.id, nome: s.nome }))
-    };
+    }, imprimir);
   });
-}
-
-function itensParaImpressao(itens) {
-  return asArray(itens).filter((item) => item?.imprimir !== false && item?.imprimir_cozinha !== false);
 }
 
 export function criarPedido(pedido) {
@@ -373,12 +441,11 @@ export function criarPedido(pedido) {
     return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });
   }
 
-  const itensImpressao = itensParaImpressao(pedido?.itens);
   return request('/pedidos', {
     method: 'POST',
     body: JSON.stringify({
       ...pedido,
-      imprimir: itensImpressao.length > 0,
+      imprimir: false,
       imprimir_bebidas: false
     })
   });
@@ -389,15 +456,14 @@ export function adicionarItensPedido(pedidoId, itens) {
     return Promise.resolve({ id: pedidoId, itens });
   }
 
-  const itensImpressao = itensParaImpressao(itens);
   return request(`/pedidos/${pedidoId}/itens`, {
     method: 'PATCH',
     body: JSON.stringify({
       itens,
-      imprimir: itensImpressao.length > 0,
+      imprimir: false,
       imprimir_bebidas: false,
-      impressao_parcial: true,
-      imprimir_apenas_itens_novos: true
+      impressao_parcial: false,
+      imprimir_apenas_itens_novos: false
     })
   });
 }
