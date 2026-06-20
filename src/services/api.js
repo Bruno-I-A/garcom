@@ -402,11 +402,20 @@ export function marcarItensComoImpressos(pedidoId, itens) {
 }
 
 function itensSemDisparoImpressao(itens) {
-  return asArray(itens).map((item) => ({
-    ...item,
-    imprimir: false,
-    imprimir_cozinha: false
-  }));
+  return asArray(itens).map((item) => {
+    const rest = { ...(item || {}) };
+    delete rest.status_impressao;
+    delete rest.impressao_status;
+    delete rest.status_cozinha;
+    delete rest.novo;
+    delete rest.impresso;
+
+    return {
+      ...rest,
+      imprimir: false,
+      imprimir_cozinha: false
+    };
+  });
 }
 
 function itensParaCliqueImpressao(itens) {
@@ -463,6 +472,7 @@ export function criarPedido(pedido) {
       ...pedido,
       itens: itensSemDisparoImpressao(pedido?.itens),
       imprimir: false,
+      imprimir_cozinha: false,
       imprimir_bebidas: false
     })
   });
@@ -478,6 +488,7 @@ export function adicionarItensPedido(pedidoId, itens) {
     body: JSON.stringify({
       itens: itensSemDisparoImpressao(itens),
       imprimir: false,
+      imprimir_cozinha: false,
       imprimir_bebidas: false,
       impressao_parcial: false,
       imprimir_apenas_itens_novos: false
