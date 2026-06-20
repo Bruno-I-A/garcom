@@ -315,12 +315,28 @@ function precoAdicionaisItem(item) {
   );
 }
 
+function itemCategoriaId(item) {
+  const categoria = item?.categoria;
+  if (item?.categoria_id != null) return item.categoria_id;
+  if (item?.categoriaId != null) return item.categoriaId;
+  if (categoria && typeof categoria === 'object') return categoria.id || categoria._id || categoria.categoria_id || categoria.nome;
+  return categoria || item?.categoria_nome || null;
+}
+
+function isBebidaItem(item) {
+  return String(itemCategoriaId(item)) === '70' || normalizeText(item?.categoria_nome || item?.categoria?.nome).includes('bebida');
+}
+
 // O backend valida itens com `id` contra o cardapio (FK). A pizza nao e um
 // produto real, entao enviamos o item sem `id`: sabores/adicionais viram texto
 // em `observacao` (que a comanda imprime) e o preco ja inclui os adicionais.
 export function prepararItensPedido(itens) {
   return asArray(itens).map((item) => {
-    if (!String(item?.id || '').startsWith('pizza-')) return item;
+    const imprimir = !isBebidaItem(item);
+
+    if (!String(item?.id || '').startsWith('pizza-')) {
+      return { ...item, imprimir, imprimir_cozinha: imprimir };
+    }
 
     const adicionais = asArray(item.adicionais);
     const grupoSabores = adicionais.find((grupo) => grupo?.grupo_id === 'sabores');
@@ -341,9 +357,15 @@ export function prepararItensPedido(itens) {
       preco: Number(item.preco || 0) + precoAdicionaisItem(item),
       quantidade: item.quantidade,
       observacao: partes.join(' | '),
+      imprimir,
+      imprimir_cozinha: imprimir,
       sabores: sabores.map((s) => ({ id: s.id, nome: s.nome }))
     };
   });
+}
+
+function itensParaImpressao(itens) {
+  return asArray(itens).filter((item) => item?.imprimir !== false && item?.imprimir_cozinha !== false);
 }
 
 export function criarPedido(pedido) {
@@ -351,9 +373,14 @@ export function criarPedido(pedido) {
     return Promise.resolve({ id: `demo-pedido-${Date.now()}`, ...pedido });
   }
 
+  const itensImpressao = itensParaImpressao(pedido?.itens);
   return request('/pedidos', {
     method: 'POST',
-    body: JSON.stringify(pedido)
+    body: JSON.stringify({
+      ...pedido,
+      imprimir: itensImpressao.length > 0,
+      imprimir_bebidas: false
+    })
   });
 }
 
@@ -362,10 +389,13 @@ export function adicionarItensPedido(pedidoId, itens) {
     return Promise.resolve({ id: pedidoId, itens });
   }
 
+  const itensImpressao = itensParaImpressao(itens);
   return request(`/pedidos/${pedidoId}/itens`, {
     method: 'PATCH',
     body: JSON.stringify({
       itens,
+      imprimir: itensImpressao.length > 0,
+      imprimir_bebidas: false,
       impressao_parcial: true,
       imprimir_apenas_itens_novos: true
     })

@@ -308,6 +308,7 @@ export default function Cardapio() {
         id,
         nome: produto?.nome || produto?.name || 'Produto',
         preco,
+        categoria_id: produtoCategoria(produto),
         quantidade: Number((Number(current[cartKey]?.quantidade || 0) + Number(quantidade || 0)).toFixed(3)),
         observacao: observacao.trim(),
         adicionais
