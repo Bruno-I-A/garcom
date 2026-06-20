@@ -24,6 +24,20 @@ function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function groupItens(itens) {
+  const groups = new Map();
+  for (const item of itens) {
+    const key = `${item?.nome || ''}\0${item?.observacao || ''}`;
+    if (!groups.has(key)) {
+      groups.set(key, { nome: item?.nome, observacao: item?.observacao, preco: Number(item?.preco || 0), quantidade: 0, items: [] });
+    }
+    const g = groups.get(key);
+    g.quantidade += Number(item?.quantidade || 0);
+    g.items.push(item);
+  }
+  return Array.from(groups.values());
+}
+
 export default function BalcaoPedido() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -205,17 +219,18 @@ export default function BalcaoPedido() {
           <section className="space-y-4 pb-40">
             <div className="space-y-3">
               {itens.length ? (
-                itens.map((item, index) => {
-                  const itemId = item?.id || item?._id || item?.item_id;
-                  const estaRemovendo = removendo === itemId;
+                groupItens(itens).map((group, index) => {
+                  const firstItem = group.items[0];
+                  const estaRemovendo = group.items.some((i) => removendo === (i?.id || i?._id || i?.item_id));
+                  const groupNovo = group.items.some((i) => itemNovoParaImpressao(pedidoIdAtual, i, bebidaIds));
                   return (
-                    <article className="card" key={`${itemId || item?.nome || index}`}>
+                    <article className="card" key={`${group.nome || ''}-${group.observacao || ''}-${index}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <h2 className="text-lg font-bold text-white">{item?.nome || 'Item'}</h2>
-                          <p className="mt-1 text-gray-400">Qtd. {item?.quantidade || 0}</p>
-                          {item?.observacao ? <p className="mt-1 text-sm text-purple-200/80">{item.observacao}</p> : null}
-                          {itemNovoParaImpressao(pedidoIdAtual, item, bebidaIds) ? (
+                          <h2 className="text-lg font-bold text-white">{group.nome || 'Item'}</h2>
+                          <p className="mt-1 text-gray-400">Qtd. {group.quantidade}</p>
+                          {group.observacao ? <p className="mt-1 text-sm text-purple-200/80">{group.observacao}</p> : null}
+                          {groupNovo ? (
                             <span className="mt-2 inline-flex rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2.5 py-1 text-xs font-black uppercase tracking-wide text-emerald-200">
                               Novo
                             </span>
@@ -223,14 +238,14 @@ export default function BalcaoPedido() {
                         </div>
                         <div className="flex items-center gap-3">
                           <strong className="whitespace-nowrap text-lg text-purple-300">
-                            {moeda(Number(item?.preco || 0) * Number(item?.quantidade || 0))}
+                            {moeda(group.preco * group.quantidade)}
                           </strong>
                           <button
                             className="danger-button h-10 min-h-10 w-10 shrink-0 px-0 text-xl"
                             type="button"
-                            onClick={() => removerItem(item)}
+                            onClick={() => removerItem(firstItem)}
                             disabled={!!removendo || saving}
-                            aria-label={`Remover ${item?.nome || 'item'}`}
+                            aria-label={`Remover ${group.nome || 'item'}`}
                           >
                             {estaRemovendo ? '…' : '×'}
                           </button>
