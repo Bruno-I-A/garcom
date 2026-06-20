@@ -196,47 +196,17 @@ function productCategoryId(produto) {
   return categoria || produto?.categoria_nome || 'Sem categoria';
 }
 
-function productDuplicateName(produto, categoriaId) {
-  const nome = produto?.nome || produto?.name || produto?.titulo || produto?.id;
-  const normalized = normalizeText(nome);
-  if (String(categoriaId) !== '70') return normalized;
-
-  return normalized
-    .replace(/\bcerveja\b/g, ' ')
-    .replace(/\bgarrafa\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function isAvailableProduct(produto) {
   return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
 }
 
-function productUpdatedAt(produto) {
-  const date = new Date(produto?.atualizado_em || produto?.updated_at || produto?.criado_em || produto?.created_at || 0);
-  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-}
-
-function shouldReplaceProduct(current, next) {
-  return productUpdatedAt(next) >= productUpdatedAt(current);
-}
-
+// Mostra exatamente os itens cadastrados no admin (sem dedup). So filtra
+// indisponiveis e normaliza categoria_id para leitura consistente no app
+// (e para o item carregar a categoria, usada no filtro de bebida da impressao).
 function normalizeCardapio(data) {
-  const produtos = asArray(data).filter(isAvailableProduct);
-  const byCategoryAndName = new Map();
-
-  produtos.forEach((produto) => {
-    const categoriaId = productCategoryId(produto);
-    const key = `${String(categoriaId)}:${productDuplicateName(produto, categoriaId)}`;
-    const normalized = { ...produto, categoria_id: categoriaId };
-    const current = byCategoryAndName.get(key);
-
-    if (!current || shouldReplaceProduct(current, normalized)) {
-      byCategoryAndName.set(key, normalized);
-    }
-  });
-
-  return Array.from(byCategoryAndName.values());
+  return asArray(data)
+    .filter(isAvailableProduct)
+    .map((produto) => ({ ...produto, categoria_id: productCategoryId(produto) }));
 }
 
 export async function getCardapio() {
@@ -375,12 +345,36 @@ export function itemJaImpresso(pedidoId, item) {
   return asArray(printedItems[pedidoKey]).includes(itemPrintKey(item));
 }
 
-export function itemNovoParaImpressao(pedidoId, item) {
-  return !isBebidaItem(item) && !itemJaImpresso(pedidoId, item);
+let bebidaIdsCache = null;
+
+// Conjunto de ids de produtos que sao bebida (categoria 70), puxado do admin.
+// Reforca o filtro de impressao mesmo em pedido antigo cujo item nao carrega
+// categoria_id (a bebida e detectada pelo id do produto).
+export async function getBebidaIds() {
+  if (bebidaIdsCache) return bebidaIdsCache;
+  try {
+    const cardapio = await getCardapio();
+    bebidaIdsCache = new Set(
+      asArray(cardapio)
+        .filter(isBebidaItem)
+        .map((produto) => String(produto?.id))
+    );
+  } catch {
+    bebidaIdsCache = new Set();
+  }
+  return bebidaIdsCache;
 }
 
-export function itensNovosParaImpressao(pedidoId, itens) {
-  return asArray(itens).filter((item) => itemNovoParaImpressao(pedidoId, item));
+function itemEhBebida(item, bebidaIds) {
+  return isBebidaItem(item) || Boolean(bebidaIds && bebidaIds.has(String(item?.id)));
+}
+
+export function itemNovoParaImpressao(pedidoId, item, bebidaIds) {
+  return !itemEhBebida(item, bebidaIds) && !itemJaImpresso(pedidoId, item);
+}
+
+export function itensNovosParaImpressao(pedidoId, itens, bebidaIds) {
+  return asArray(itens).filter((item) => itemNovoParaImpressao(pedidoId, item, bebidaIds));
 }
 
 export function marcarItensComoImpressos(pedidoId, itens) {
