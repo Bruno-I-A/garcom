@@ -195,6 +195,18 @@ function productCategoryId(produto) {
   return categoria || produto?.categoria_nome || 'Sem categoria';
 }
 
+function productDuplicateName(produto, categoriaId) {
+  const nome = produto?.nome || produto?.name || produto?.titulo || produto?.id;
+  const normalized = normalizeText(nome);
+  if (String(categoriaId) !== '70') return normalized;
+
+  return normalized
+    .replace(/\bcerveja\b/g, ' ')
+    .replace(/\bgarrafa\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function isAvailableProduct(produto) {
   return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
 }
@@ -214,8 +226,7 @@ function normalizeCardapio(data) {
 
   produtos.forEach((produto) => {
     const categoriaId = productCategoryId(produto);
-    const nome = produto?.nome || produto?.name || produto?.titulo || produto?.id;
-    const key = `${String(categoriaId)}:${normalizeText(nome)}`;
+    const key = `${String(categoriaId)}:${productDuplicateName(produto, categoriaId)}`;
     const normalized = { ...produto, categoria_id: categoriaId };
     const current = byCategoryAndName.get(key);
 
