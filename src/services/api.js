@@ -376,7 +376,7 @@ export function itemJaImpresso(pedidoId, item) {
 }
 
 export function itemNovoParaImpressao(pedidoId, item) {
-  return item?.imprimir !== false && item?.imprimir_cozinha !== false && !itemJaImpresso(pedidoId, item);
+  return !isBebidaItem(item) && !itemJaImpresso(pedidoId, item);
 }
 
 export function itensNovosParaImpressao(pedidoId, itens) {
@@ -398,6 +398,22 @@ export function marcarItensComoImpressos(pedidoId, itens) {
     impressao_status: 'impresso',
     novo: false,
     impresso: true
+  }));
+}
+
+function itensSemDisparoImpressao(itens) {
+  return asArray(itens).map((item) => ({
+    ...item,
+    imprimir: false,
+    imprimir_cozinha: false
+  }));
+}
+
+function itensParaCliqueImpressao(itens) {
+  return asArray(itens).map((item) => ({
+    ...item,
+    imprimir: true,
+    imprimir_cozinha: true
   }));
 }
 
@@ -445,6 +461,7 @@ export function criarPedido(pedido) {
     method: 'POST',
     body: JSON.stringify({
       ...pedido,
+      itens: itensSemDisparoImpressao(pedido?.itens),
       imprimir: false,
       imprimir_bebidas: false
     })
@@ -459,7 +476,7 @@ export function adicionarItensPedido(pedidoId, itens) {
   return request(`/pedidos/${pedidoId}/itens`, {
     method: 'PATCH',
     body: JSON.stringify({
-      itens,
+      itens: itensSemDisparoImpressao(itens),
       imprimir: false,
       imprimir_bebidas: false,
       impressao_parcial: false,
@@ -497,7 +514,7 @@ export function imprimirItensPedido(pedidoId, itens) {
   return request(`/pedidos/${pedidoId}/reimprimir`, {
     method: 'POST',
     body: JSON.stringify({
-      itens,
+      itens: itensParaCliqueImpressao(itens),
       impressao_parcial: true,
       imprimir_apenas_itens_novos: true
     })
