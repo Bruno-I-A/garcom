@@ -196,8 +196,11 @@ function productCategoryId(produto) {
   return categoria || produto?.categoria_nome || 'Sem categoria';
 }
 
+// App do garcom mostra tudo que esta ativo/disponivel, SEM filtro de horario.
+// O backend manda `disponivel_agora: false` fora da janela (ex.: vianda fora do
+// almoco); aqui ignoramos essa flag de propósito para nunca esconder por horario.
 function isAvailableProduct(produto) {
-  return produto?.disponivel !== false && produto?.ativo !== false && produto?.disponivel_agora !== false;
+  return produto?.disponivel !== false && produto?.ativo !== false;
 }
 
 // Mostra exatamente os itens cadastrados no admin (sem dedup). So filtra

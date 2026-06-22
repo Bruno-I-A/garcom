@@ -13,6 +13,17 @@ function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Le um preco que pode vir como numero ou texto ("18,50", "R$ 1.234,56", "18.50").
+// Sem isso, Number("18,50") = NaN e o item entra com valor zerado/errado.
+function precoNumero(valor) {
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+  if (valor == null) return 0;
+  let texto = String(valor).trim().replace(/[^\d.,-]/g, '');
+  if (texto.includes(',')) texto = texto.replace(/\./g, '').replace(',', '.');
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
 function normalizarTexto(valor) {
   return String(valor || '')
     .normalize('NFD')
@@ -69,7 +80,7 @@ function adicionalNome(item) {
 }
 
 function adicionalPreco(item) {
-  return Number(item?.preco || item?.price || item?.valor || 0);
+  return precoNumero(item?.preco ?? item?.price ?? item?.valor);
 }
 
 function ehPedidoDeCobertura(grupo, produto) {
@@ -249,6 +260,14 @@ export default function Cardapio() {
     return 'livre';
   }
 
+  // Usa o preco cadastrado do produto de buffet; so cai no valor fixo
+  // (R$/pessoa ou R$/kg) quando o produto esta sem preco no admin.
+  function precoBuffet(produto) {
+    const registrado = precoNumero(produto?.preco ?? produto?.price);
+    if (registrado > 0) return registrado;
+    return tipoBuffet(produto) === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
+  }
+
   function valorBuffetInput(produto) {
     const id = produtoId(produto);
     const tipo = tipoBuffet(produto);
@@ -299,7 +318,7 @@ export default function Cardapio() {
     });
   }
 
-  function addProduto(produto, quantidade = 1, preco = Number(produto?.preco || produto?.price || 0), observacao = '', adicionais = [], unico = false) {
+  function addProduto(produto, quantidade = 1, preco = precoNumero(produto?.preco ?? produto?.price), observacao = '', adicionais = [], unico = false) {
     const id = produtoId(produto);
     const cartKey = buildCartKey(String(id), observacao, adicionais, unico);
     setCart((current) => ({
@@ -338,7 +357,7 @@ export default function Cardapio() {
     });
   }
 
-  async function abrirModalProduto(produto, categoria, quantidadeInicial = 1, preco = Number(produto?.preco || produto?.price || 0), unico = false) {
+  async function abrirModalProduto(produto, categoria, quantidadeInicial = 1, preco = precoNumero(produto?.preco ?? produto?.price), unico = false) {
     const categoriaDoProduto = produtoCategoria(produto);
     const categoriaApiId = categoria?.id || categoriaDoProduto;
     setError('');
@@ -442,7 +461,7 @@ export default function Cardapio() {
     const tipo = tipoBuffet(produto);
     const rawValue = valorBuffetInput(produto);
     const quantidadeBuffet = tipo === 'kg' ? Number(Number(rawValue).toFixed(3)) : Math.floor(Number(rawValue));
-    const precoBuffet = tipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
+    const valorBuffet = precoBuffet(produto);
 
     if (!quantidadeBuffet || quantidadeBuffet <= 0) {
       setError(tipo === 'kg' ? 'Informe o peso do buffet.' : 'Informe o número de pessoas.');
@@ -450,7 +469,7 @@ export default function Cardapio() {
     }
 
     setError('');
-    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, precoBuffet, true);
+    abrirModalProduto(produto, categoriaAtual, quantidadeBuffet, valorBuffet, true);
   }
 
   async function confirmarPedido() {
@@ -542,12 +561,12 @@ export default function Cardapio() {
               resultadosBusca.map((produto) => {
                 const id = produtoId(produto);
                 const itemQuantidade = quantidadeProduto(produto);
-                const preco = Number(produto?.preco || produto?.price || 0);
+                const preco = precoNumero(produto?.preco ?? produto?.price);
                 const categoriaDoProduto = categoriasOrdenadas.find((c) => c.items.some((p) => produtoId(p) === id));
                 const buffet = isProdutoBuffet(produto, categoriaDoProduto?.nome || '');
                 const buffetTipo = tipoBuffet(produto);
                 const buffetValue = valorBuffetInput(produto);
-                const buffetPreco = buffetTipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
+                const buffetPreco = precoBuffet(produto);
                 const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
                 const buffetTotal = Number.isFinite(buffetQuantidade) ? buffetPreco * buffetQuantidade : 0;
                 return (
@@ -648,11 +667,11 @@ export default function Cardapio() {
               categoriaAtual.items.map((produto) => {
                 const id = produtoId(produto);
                 const itemQuantidade = quantidadeProduto(produto);
-                const preco = Number(produto?.preco || produto?.price || 0);
+                const preco = precoNumero(produto?.preco ?? produto?.price);
                 const buffet = isProdutoBuffet(produto, categoriaAtual.nome);
                 const buffetTipo = tipoBuffet(produto);
                 const buffetValue = valorBuffetInput(produto);
-                const buffetPreco = buffetTipo === 'kg' ? BUFFET_KG_PRECO : BUFFET_LIVRE_PRECO;
+                const buffetPreco = precoBuffet(produto);
                 const buffetQuantidade = buffetTipo === 'kg' ? Number(buffetValue || 0) : Math.floor(Number(buffetValue || 0));
                 const buffetTotal = Number.isFinite(buffetQuantidade) ? buffetPreco * buffetQuantidade : 0;
                 return (
