@@ -423,6 +423,21 @@ function itensParaCliqueImpressao(itens) {
   }));
 }
 
+// O backend calcula o total ignorando quantidade fracionada (buffet por kg):
+// cobra o preco cheio do kg em vez de preco x peso. Para itens pesados,
+// enviamos quantidade 1 com o preco ja multiplicado pelo peso e guardamos o
+// peso na observacao (pra cozinha) e em `peso_kg`, mantendo o total correto.
+function ajustarQuantidadePesada(item) {
+  const quantidade = Number(item?.quantidade || 0);
+  if (Number.isInteger(quantidade) || quantidade <= 0) return item;
+
+  const precoLinha = Number((Number(item?.preco || 0) * quantidade).toFixed(2));
+  const pesoTexto = `${quantidade.toFixed(3).replace('.', ',')} kg`;
+  const observacao = item?.observacao ? `${item.observacao} | ${pesoTexto}` : pesoTexto;
+
+  return { ...item, preco: precoLinha, quantidade: 1, peso_kg: quantidade, observacao };
+}
+
 // O backend valida itens com `id` contra o cardapio (FK). A pizza nao e um
 // produto real, entao enviamos o item sem `id`: sabores/adicionais viram texto
 // em `observacao` (que a comanda imprime) e o preco ja inclui os adicionais.
@@ -431,7 +446,7 @@ export function prepararItensPedido(itens) {
     const imprimir = !isBebidaItem(item);
 
     if (!String(item?.id || '').startsWith('pizza-')) {
-      return withNewPrintStatus(item, imprimir);
+      return withNewPrintStatus(ajustarQuantidadePesada(item), imprimir);
     }
 
     const adicionais = asArray(item.adicionais);
