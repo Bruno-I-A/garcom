@@ -576,14 +576,18 @@ export function removerItemPedido(pedidoId, itemId, itensRestantes) {
     return Promise.resolve({ id: pedidoId, itemId });
   }
 
-  return request(`/pedidos/${pedidoId}/itens/${itemId}`, {
-    method: 'DELETE'
-  }).catch(() =>
-    request(`/pedidos/${pedidoId}/itens`, {
-      method: 'PATCH',
-      body: JSON.stringify({ itens: itensRestantes })
+  // Nao existe rota DELETE de item, e o PATCH /itens ACRESCENTA (usado no
+  // adicionar). Para remover, substituimos a lista inteira via PUT /itens
+  // (replace) com os itens que sobraram, sem disparar impressao.
+  return request(`/pedidos/${pedidoId}/itens`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      itens: itensSemDisparoImpressao(itensRestantes),
+      imprimir: false,
+      imprimir_cozinha: false,
+      imprimir_bebidas: false
     })
-  );
+  });
 }
 
 export function asArray(data) {
