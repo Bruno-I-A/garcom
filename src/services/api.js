@@ -212,6 +212,20 @@ function normalizeCardapio(data) {
     .map((produto) => ({ ...produto, categoria_id: productCategoryId(produto) }));
 }
 
+function mergeCardapioPorId(...listas) {
+  const seen = new Set();
+  const merged = [];
+  listas.forEach((lista) => {
+    asArray(lista).forEach((produto) => {
+      const key = String(produto?.id ?? produto?._id ?? produto?.produto_id ?? produto?.nome);
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(produto);
+    });
+  });
+  return merged;
+}
+
 export async function getCardapio() {
   if (isDemoSession()) {
     return Promise.resolve([
@@ -222,6 +236,19 @@ export async function getCardapio() {
       { id: 'pudim', nome: 'Pudim', preco: 14.9, categoria_id: 'sobremesas' }
     ]);
   }
+
+  // O backend filtra o /cardapio pelo periodo da categoria conforme a hora
+  // (ex.: Buffet/Prato Feito so no almoco). Buscamos almoco + noite e juntamos
+  // por id, pra mostrar o cardapio completo em qualquer horario (sem filtro de
+  // horario). Se um periodo falhar, usamos o que vier; se ambos falharem, cai
+  // no /cardapio simples.
+  const [almoco, noite] = await Promise.all([
+    request('/cardapio?periodo=almoco').catch(() => null),
+    request('/cardapio?periodo=noite').catch(() => null)
+  ]);
+
+  const merged = mergeCardapioPorId(almoco, noite);
+  if (merged.length) return normalizeCardapio(merged);
 
   return normalizeCardapio(await request('/cardapio'));
 }
